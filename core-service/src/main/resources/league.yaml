@@ -1,0 +1,125 @@
+openapi: 3.0.3
+info:
+  title: League API
+  version: 1.0.0
+paths:
+  /standings:
+    get:
+      summary: Get all team standings
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TeamStanding'
+
+  /results:
+    get:
+      summary: Get all finished match results
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MatchItem'
+
+  /fixtures:
+    get:
+      summary: Get all upcoming fixtures
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MatchItem'
+
+  /results/{teamName}:
+    get:
+      summary: Get finished matches for a specific team
+      parameters:
+        - name: teamName
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MatchItem'
+
+  /fixtures/{teamName}:
+    get:
+      summary: Get upcoming fixtures for a specific team
+      parameters:
+        - name: teamName
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MatchItem'
+
+components:
+  schemas:
+    TeamStanding:
+      type: object
+      properties:
+        rank:
+          type: integer
+        teamName:
+          type: string
+        matchesPlayed:
+          type: integer
+        points:
+          type: integer
+        wins:
+          type: integer
+        setsWon:
+          type: integer
+        setsLost:
+          type: integer
+        pointsWon:
+          type: integer
+        pointsLost:
+          type: integer
+        setsRatio:
+          type: number
+        pointRatio:
+          type: number
+
+    MatchItem:
+      type: object
+      properties:
+        matchId:
+          type: string
+        date:
+          type: string
+        homeTeamName:
+          type: string
+        awayTeamName:
+          type: string
+        score:
+          type: string
+        isFinished:
+          type: boolean

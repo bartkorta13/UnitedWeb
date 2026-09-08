@@ -5,6 +5,7 @@ import aws.sdk.kotlin.services.dynamodb.model.AttributeValue
 import aws.sdk.kotlin.services.dynamodb.model.BatchWriteItemRequest
 import aws.sdk.kotlin.services.dynamodb.model.PutRequest
 import aws.sdk.kotlin.services.dynamodb.model.WriteRequest
+import aws.sdk.kotlin.services.dynamodb.model.QueryRequest
 import com.united.model.MatchItem
 import com.united.model.TeamStanding
 import kotlinx.coroutines.delay
@@ -75,6 +76,67 @@ class DynamoRepository(
 
                 // Pause for 2 seconds before the next batch to let capacity refill
                 delay(2000.milliseconds)
+            }
+        }
+    }
+
+    /**
+     * Fetches all team standings from DynamoDB.
+     */
+    suspend fun getStandings(): List<TeamStanding> {
+        DynamoDbClient.fromEnvironment().use { ddb ->
+            val request = QueryRequest {
+                tableName = this@DynamoRepository.tableName
+                keyConditionExpression = "PK = :pk"
+                expressionAttributeValues = mapOf(
+                    ":pk" to AttributeValue.S("STANDINGS")
+                )
+            }
+
+            val response = ddb.query(request)
+            val items = response.items ?: emptyList()
+
+            return items.map { item ->
+                TeamStanding(
+                    rank = item["rank"]?.asN()?.toInt() ?: 0,
+                    teamName = item["teamName"]?.asS() ?: "",
+                    matchesPlayed = item["matchesPlayed"]?.asN()?.toInt() ?: 0,
+                    points = item["points"]?.asN()?.toInt() ?: 0,
+                    wins = item["wins"]?.asN()?.toInt() ?: 0,
+                    setsWon = item["setsWon"]?.asN()?.toInt() ?: 0,
+                    setsLost = item["setsLost"]?.asN()?.toInt() ?: 0,
+                    pointsWon = item["pointsWon"]?.asN()?.toInt() ?: 0,
+                    pointsLost = item["pointsLost"]?.asN()?.toInt() ?: 0
+                )
+            }.sortedBy { it.rank }
+        }
+    }
+
+    /**
+     * Fetches all matches from DynamoDB.
+     */
+    suspend fun getMatches(): List<MatchItem> {
+        DynamoDbClient.fromEnvironment().use { ddb ->
+            val request = QueryRequest {
+                tableName = this@DynamoRepository.tableName
+                keyConditionExpression = "PK = :pk"
+                expressionAttributeValues = mapOf(
+                    ":pk" to AttributeValue.S("MATCHES")
+                )
+            }
+
+            val response = ddb.query(request)
+            val items = response.items ?: emptyList()
+
+            return items.map { item ->
+                MatchItem(
+                    matchId = item["SK"]?.asS()?.removePrefix("MATCH#") ?: "",
+                    date = item["date"]?.asS() ?: "",
+                    homeTeamName = item["homeTeam"]?.asS() ?: "",
+                    awayTeamName = item["awayTeam"]?.asS() ?: "",
+                    score = item["score"]?.asS() ?: "",
+                    isFinished = item["isFinished"]?.asBool() ?: false
+                )
             }
         }
     }

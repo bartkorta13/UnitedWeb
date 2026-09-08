@@ -13,7 +13,7 @@ data class TeamStanding(
     val pointsLost: Int        // pkt -
 ) {
     // Helpful computed properties for UI/stats
-    val setRatio: Double
+    val setsRatio: Double
         get() = if (setsLost == 0) setsWon.toDouble() else setsWon.toDouble() / setsLost
 
     val pointRatio: Double

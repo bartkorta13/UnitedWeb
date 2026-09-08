@@ -6,7 +6,7 @@ import com.united.model.TeamStanding
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
 
-class LeagueScraper(
+class LeagueDataScraper(
     private val standingsUrl: String = "https://system.dzps.pl/index.php?mode=12&type=9",
     private val matchesUrl: String = "https://system.dzps.pl/index.php?mode=4&type=9"
 ) {

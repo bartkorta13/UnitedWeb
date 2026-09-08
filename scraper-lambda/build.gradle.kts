@@ -6,16 +6,11 @@ plugins {
 group = "com.united"
 version = "1.0-SNAPSHOT"
 
-repositories {
-    mavenCentral()
-}
-
 dependencies {
+
+    implementation(project(":common"))
     // HTML Scraping
     implementation("org.jsoup:jsoup:1.18.1")
-
-    // AWS SDK for Kotlin (DynamoDB)
-    implementation("aws.sdk.kotlin:dynamodb:1.0.60")
 
     // Coroutines & Logging
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.1")
@@ -24,6 +19,11 @@ dependencies {
     // AWS Lambda Java Runtime
     implementation("com.amazonaws:aws-lambda-java-core:1.2.3")
     implementation("com.amazonaws:aws-lambda-java-events:3.11.4")
+
+    // Testing dependencies
+    testImplementation("org.junit.jupiter:junit-jupiter:5.10.2")
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.1")
 }
 
 
