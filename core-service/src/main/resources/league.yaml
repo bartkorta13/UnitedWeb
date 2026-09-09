@@ -5,6 +5,7 @@ info:
 paths:
   /standings:
     get:
+      operationId: getStandings
       summary: Get all team standings
       responses:
         '200':
@@ -18,6 +19,7 @@ paths:
 
   /results:
     get:
+      operationId: getResults
       summary: Get all finished match results
       responses:
         '200':
@@ -31,6 +33,7 @@ paths:
 
   /fixtures:
     get:
+      operationId: getFixtures
       summary: Get all upcoming fixtures
       responses:
         '200':
@@ -44,6 +47,7 @@ paths:
 
   /results/{teamName}:
     get:
+      operationId: getResultsByTeam
       summary: Get finished matches for a specific team
       parameters:
         - name: teamName
@@ -63,6 +67,7 @@ paths:
 
   /fixtures/{teamName}:
     get:
+      operationId: getFixturesByTeam
       summary: Get upcoming fixtures for a specific team
       parameters:
         - name: teamName
@@ -84,6 +89,7 @@ components:
   schemas:
     TeamStanding:
       type: object
+      required: [rank, teamName, matchesPlayed, points, wins, setsWon, setsLost, pointsWon, pointsLost, setsRatio, pointRatio]
       properties:
         rank:
           type: integer
@@ -107,19 +113,44 @@ components:
           type: number
         pointRatio:
           type: number
+        form:
+          type: array
+          items:
+            type: string
+            enum: [W, P]
+          description: Last up to 5 match results ('W' for win, 'P' for loss), ordered from most recent to oldest.
 
     MatchItem:
       type: object
+      required: [matchId, date, homeTeamName, awayTeamName, score, isFinished]
       properties:
         matchId:
           type: string
         date:
           type: string
+          description: Local match date and time in `YYYY-MM-DD HH:mm` form.
         homeTeamName:
           type: string
         awayTeamName:
           type: string
         score:
           type: string
+          description: Final score in sets (e.g. '3:1').
+        finalScore:
+          type: string
+          description: Final score in sets (e.g. '3:1').
         isFinished:
           type: boolean
+        place:
+          type: string
+          nullable: true
+          description: Location / hall where match is played.
+        hour:
+          type: string
+          nullable: true
+          description: Match hour or status (e.g. '17:00' or 'zawiadamia gospodarz').
+        sets:
+          type: array
+          items:
+            type: string
+          description: Points scores for each set played (e.g. ['25:16', '23:25', '25:20']).

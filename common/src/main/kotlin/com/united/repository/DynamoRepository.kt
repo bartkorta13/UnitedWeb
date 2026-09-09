@@ -3,10 +3,12 @@ package com.united.repository
 import aws.sdk.kotlin.services.dynamodb.DynamoDbClient
 import aws.sdk.kotlin.services.dynamodb.model.AttributeValue
 import aws.sdk.kotlin.services.dynamodb.model.BatchWriteItemRequest
+import aws.sdk.kotlin.services.dynamodb.model.DeleteRequest
 import aws.sdk.kotlin.services.dynamodb.model.PutRequest
 import aws.sdk.kotlin.services.dynamodb.model.WriteRequest
 import aws.sdk.kotlin.services.dynamodb.model.QueryRequest
 import com.united.model.MatchItem
+import com.united.model.ScoreParser
 import com.united.model.TeamStanding
 import kotlinx.coroutines.delay
 import kotlin.time.Duration.Companion.milliseconds
@@ -19,7 +21,8 @@ class DynamoRepository(
      * Saves or overwrites all team standings in DynamoDB table 'LeagueData'.
      */
     suspend fun saveStandings(standings: List<TeamStanding>) {
-        val writeRequests = standings.map { standing ->
+        val validStandings = standings.filter { it.rank > 0 && !it.teamName.equals("Zespół", ignoreCase = true) }
+        val writeRequests = validStandings.map { standing ->
             val item = mapOf(
                 "PK" to AttributeValue.S("STANDINGS"),
                 "SK" to AttributeValue.S("TEAM#${standing.teamName}"),
@@ -31,10 +34,11 @@ class DynamoRepository(
                 "setsWon" to AttributeValue.N(standing.setsWon.toString()),
                 "setsLost" to AttributeValue.N(standing.setsLost.toString()),
                 "pointsWon" to AttributeValue.N(standing.pointsWon.toString()),
-                "pointsLost" to AttributeValue.N(standing.pointsLost.toString())
+                "pointsLost" to AttributeValue.N(standing.pointsLost.toString()),
+                "form" to AttributeValue.L(standing.form.map { AttributeValue.S(it) })
             )
             WriteRequest { putRequest = PutRequest { this.item = item } }
-        }
+        }.toMutableList()
 
         executeBatchWrite(writeRequests)
     }
@@ -44,16 +48,23 @@ class DynamoRepository(
      */
     suspend fun saveMatches(matches: List<MatchItem>) {
         val writeRequests = matches.map { match ->
-            val item = mapOf(
+            val scoreVal = match.finalScore.ifEmpty { match.score }
+            val item = mutableMapOf(
                 "PK" to AttributeValue.S("MATCHES"),
                 // The SK is now perfectly stable using the official match ID
                 "SK" to AttributeValue.S("MATCH#${match.matchId}"),
                 "date" to AttributeValue.S(match.date),
                 "homeTeam" to AttributeValue.S(match.homeTeamName),
                 "awayTeam" to AttributeValue.S(match.awayTeamName),
-                "score" to AttributeValue.S(match.score),
+                "score" to AttributeValue.S(scoreVal),
+                "finalScore" to AttributeValue.S(scoreVal),
                 "isFinished" to AttributeValue.Bool(match.isFinished)
             )
+            match.place?.takeIf { it.isNotBlank() }?.let { item["place"] = AttributeValue.S(it) }
+            match.hour?.takeIf { it.isNotBlank() }?.let { item["hour"] = AttributeValue.S(it) }
+            if (match.sets.isNotEmpty()) {
+                item["sets"] = AttributeValue.L(match.sets.map { AttributeValue.S(it) })
+            }
             WriteRequest { putRequest = PutRequest { this.item = item } }
         }
 
@@ -106,9 +117,11 @@ class DynamoRepository(
                     setsWon = item["setsWon"]?.asN()?.toInt() ?: 0,
                     setsLost = item["setsLost"]?.asN()?.toInt() ?: 0,
                     pointsWon = item["pointsWon"]?.asN()?.toInt() ?: 0,
-                    pointsLost = item["pointsLost"]?.asN()?.toInt() ?: 0
+                    pointsLost = item["pointsLost"]?.asN()?.toInt() ?: 0,
+                    form = (item["form"] as? AttributeValue.L)?.value?.mapNotNull { (it as? AttributeValue.S)?.value } ?: emptyList()
                 )
-            }.sortedBy { it.rank }
+            }.filter { it.rank > 0 && !it.teamName.equals("Zespół", ignoreCase = true) }
+             .sortedBy { it.rank }
         }
     }
 
@@ -129,13 +142,41 @@ class DynamoRepository(
             val items = response.items ?: emptyList()
 
             return items.map { item ->
+                val rawFinalScore = (item["finalScore"] as? AttributeValue.S)?.value?.trim()
+                val rawScore = (item["score"] as? AttributeValue.S)?.value?.trim()
+
+                // Extract sets from:
+                // 1) item["sets"] if AttributeValue.L
+                // 2) item["sets"] if AttributeValue.S
+                // 3) item["score"]
+                // 4) item["finalScore"]
+                val setsFromAttrL = (item["sets"] as? AttributeValue.L)?.value?.mapNotNull { (it as? AttributeValue.S)?.value } ?: emptyList()
+                val setsFromAttrS = (item["sets"] as? AttributeValue.S)?.value?.let { ScoreParser.parseSets(it) } ?: emptyList()
+                val setsFromScore = ScoreParser.parseSets(rawScore)
+                val setsFromFinal = ScoreParser.parseSets(rawFinalScore)
+
+                val sets = when {
+                    setsFromAttrL.isNotEmpty() -> setsFromAttrL
+                    setsFromAttrS.isNotEmpty() -> setsFromAttrS
+                    setsFromScore.isNotEmpty() -> setsFromScore
+                    else -> setsFromFinal
+                }
+
+                val scoreVal = ScoreParser.resolveMatchScore(rawFinalScore, rawScore, sets)
+                val rawIsFinished = (item["isFinished"] as? AttributeValue.Bool)?.value ?: false
+                val isFinished = rawIsFinished || (scoreVal.isNotBlank() && scoreVal != "0:0") || sets.isNotEmpty()
+
                 MatchItem(
-                    matchId = item["SK"]?.asS()?.removePrefix("MATCH#") ?: "",
-                    date = item["date"]?.asS() ?: "",
-                    homeTeamName = item["homeTeam"]?.asS() ?: "",
-                    awayTeamName = item["awayTeam"]?.asS() ?: "",
-                    score = item["score"]?.asS() ?: "",
-                    isFinished = item["isFinished"]?.asBool() ?: false
+                    matchId = (item["SK"] as? AttributeValue.S)?.value?.removePrefix("MATCH#") ?: "",
+                    date = (item["date"] as? AttributeValue.S)?.value ?: "",
+                    homeTeamName = (item["homeTeam"] as? AttributeValue.S)?.value ?: "",
+                    awayTeamName = (item["awayTeam"] as? AttributeValue.S)?.value ?: "",
+                    score = scoreVal,
+                    finalScore = scoreVal,
+                    isFinished = isFinished,
+                    place = (item["place"] as? AttributeValue.S)?.value,
+                    hour = (item["hour"] as? AttributeValue.S)?.value,
+                    sets = sets
                 )
             }
         }

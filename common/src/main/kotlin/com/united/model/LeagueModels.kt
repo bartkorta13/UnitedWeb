@@ -10,7 +10,8 @@ data class TeamStanding(
     val setsWon: Int,          // Sety +
     val setsLost: Int,         // Sety -
     val pointsWon: Int,        // pkt +
-    val pointsLost: Int        // pkt -
+    val pointsLost: Int,       // pkt -
+    val form: List<String> = emptyList() // Ostatnie 5 meczów ("W" lub "P", od najnowszego)
 ) {
     // Helpful computed properties for UI/stats
     val setsRatio: Double
@@ -25,8 +26,12 @@ data class MatchItem(
     val date: String,
     val homeTeamName: String,
     val awayTeamName: String,
-    val score: String,
-    val isFinished: Boolean
+    val score: String = "",
+    val isFinished: Boolean,
+    val place: String? = null,
+    val hour: String? = null,
+    val sets: List<String> = emptyList(),
+    val finalScore: String = score
 )
 
 data class LeagueData(

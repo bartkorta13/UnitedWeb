@@ -1,0 +1,943 @@
+<header class="site-header">
+  <div class="header-container">
+    <a class="brand" href="#start" (click)="closeMenu()" aria-label="United Środa Śląska — strona główna">
+      <div class="brand-crest">
+        <img
+          [src]="teamLogoUrl('United_Środa_Śląska')"
+          alt="KS United Środa Śląska logo"
+          class="brand-crest-img"
+        />
+      </div>
+      <div class="brand-text">
+        <span class="brand-title">UNITED</span>
+        <span class="brand-sub">ŚRODA ŚLĄSKA</span>
+      </div>
+    </a>
+
+    <button
+      class="menu-toggle"
+      type="button"
+      (click)="toggleMenu()"
+      [attr.aria-expanded]="menuOpen()"
+      aria-label="Menu nawigacyjne"
+    >
+      <span class="bar"></span>
+      <span class="bar"></span>
+      <span class="bar"></span>
+    </button>
+
+    <nav [ngClass]="{ open: menuOpen() }" aria-label="Główna nawigacja">
+      <a href="#start" (click)="closeMenu()">Start</a>
+      <a href="#wyniki" (click)="closeMenu()">Wyniki</a>
+      <a href="#mecze" (click)="closeMenu()">Terminarz</a>
+      <a href="#tabela" (click)="closeMenu()">Tabela</a>
+      <a href="#klub" (click)="closeMenu()">O Klubie</a>
+      <a href="#kontakt" (click)="closeMenu()">Kontakt</a>
+      <a class="nav-cta" href="#mecze" (click)="closeMenu()">
+        <span>Najbliższy mecz</span>
+        <span class="cta-glow-dot"></span>
+      </a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <!-- HERO SECTION: Dramatic Sportsbook/Landing Page Vibe -->
+  <section id="start" class="hero">
+    <!-- Atmospheric Stadium Lighting Effects -->
+    <div class="stadium-glow stadium-glow-top"></div>
+    <div class="stadium-glow stadium-glow-right"></div>
+    <div class="pitch-energy-lines" aria-hidden="true"></div>
+
+    <div class="hero-content">
+      <div class="hero-left">
+        <div class="badge-pill">
+          <span>OFICJALNA STRONA · KLUB PIŁKI SIATKOWEJ</span>
+        </div>
+
+        <h1 class="hero-title">
+          <span class="title-white">UNITED</span>
+          <span class="title-green">ŚRODA ŚLĄSKA</span>
+        </h1>
+
+        <p class="hero-lead">
+          Cechuje nas pasja, walka o każdy punkt i niezrównana energia na parkiecie.
+          <br>Śledź nasze mecze w ramach II Ligi Dolnośląskiej mężczyzn w sezonie 2026/27.
+        </p>
+
+        <div class="hero-actions">
+          <a class="btn btn-primary" href="#mecze">
+            <span>Zobacz terminarz</span>
+            <svg class="btn-icon" viewBox="0 0 20 20" fill="currentColor" width="18" height="18">
+              <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v10.586l3.293-3.293a1 1 0 111.414 1.414l-5 5a1 1 0 01-1.414 0l-5-5a1 1 0 111.414-1.414L9 14.586V4a1 1 0 011-1z" clip-rule="evenodd" />
+            </svg>
+          </a>
+          <a class="btn btn-glass" href="#tabela">
+            <span>Tabela ligowa</span>
+            <svg class="btn-icon" viewBox="0 0 20 20" fill="currentColor" width="18" height="18">
+              <path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd" />
+            </svg>
+          </a>
+        </div>
+
+        <div class="hero-stats-ribbon">
+          <div class="stat-box">
+            <span class="stat-number">{{ results().length }}</span>
+            <span class="stat-label">{{ playedMatchesLabel(results().length) }}</span>
+          </div>
+          <div class="stat-divider"></div>
+          <div class="stat-box">
+            <span class="stat-number">{{ fixtures().length }}</span>
+            <span class="stat-label">{{ remainingMatchesLabel(fixtures().length) }}</span>
+          </div>
+          <div class="stat-divider"></div>
+          <div class="stat-box">
+            @if (unitedStanding(); as standing) {
+              <span class="stat-number">#{{ standing.rank }}</span>
+              <span class="stat-label">Pozycja w tabeli</span>
+            } @else {
+              <span class="stat-number">100%</span>
+              <span class="stat-label">Zaangażowania</span>
+            }
+          </div>
+        </div>
+      </div>
+
+      <!-- HERO RIGHT: Featured Next Match Card -->
+      <div class="hero-right">
+        <aside class="featured-match-showcase">
+          <div class="card-glow-border"></div>
+
+          <div class="showcase-header">
+            <div class="match-category">
+              <span class="match-live-dot"></span>
+              <span>NAJBLIŻSZY MECZ</span>
+            </div>
+            @if (nextMatch(); as match) {
+              <span class="venue-badge" [class.home-badge]="isHome(match)" [class.away-badge]="!isHome(match)">
+                {{ isHome(match) ? 'MECZ DOMOWY' : 'WYJAZD' }}
+              </span>
+            }
+          </div>
+
+          @if (nextMatch(); as match) {
+            <div class="showcase-date">
+              <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16" class="calendar-icon">
+                <path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd" />
+              </svg>
+              <span class="showcase-date-text">{{ formatHeroDate(match) }}</span>
+              <span class="match-time-tag" [class.no-time]="!hasSpecificTime(match)">{{ matchHeroHour(match) }}</span>
+            </div>
+
+            <div class="matchup-duel">
+              <!-- Team 1 -->
+              <div class="team-side" [class.is-united]="isHome(match)">
+                <button
+                  type="button"
+                  class="team-avatar"
+                  [class.is-flipped]="heroHomeFlipped()"
+                  [class.is-top4]="isTeamTopFour(match.homeTeamName)"
+                  (click)="toggleHeroAvatar('home')"
+                  [title]="heroHomeFlipped() ? 'Kliknij, aby pokazać logo' : 'Kliknij, aby zobaczyć miejsce w tabeli'"
+                  [attr.aria-label]="heroHomeFlipped() ? 'Pokaż logo zespołu' : 'Pokaż miejsce w tabeli'"
+                >
+                  <div class="avatar-flip-card">
+                    <div class="avatar-face avatar-front">
+                      <img
+                        [src]="teamLogoUrl(match.homeTeamName)"
+                        [alt]="teamName(match.homeTeamName)"
+                        class="avatar-logo-img"
+                        (error)="$any($event.target).style.display = 'none'"
+                      />
+                      @if (isHome(match)) {
+                        <span class="avatar-letter">U</span>
+                      } @else {
+                        <span class="avatar-letter">{{ teamName(match.homeTeamName).charAt(0) }}</span>
+                      }
+                    </div>
+                    <div class="avatar-face avatar-back">
+                      <span class="standing-rank-num">
+                        <span class="rank-hash">#</span>{{ teamStandingRankNumber(match.homeTeamName) }}
+                      </span>
+                      <span class="standing-rank-label">MSC</span>
+                    </div>
+                  </div>
+                </button>
+                <strong class="team-title">
+                  {{ isHome(match) ? 'UNITED ŚRODA ŚL.' : teamName(match.homeTeamName) }}
+                </strong>
+                <span class="team-role">GOSPODARZ</span>
+              </div>
+
+              <!-- VS Badge -->
+              <div class="vs-container">
+                <div class="vs-circle">
+                  <span>VS</span>
+                </div>
+                <div class="vs-beam"></div>
+              </div>
+
+              <!-- Team 2 -->
+              <div class="team-side" [class.is-united]="!isHome(match)">
+                <button
+                  type="button"
+                  class="team-avatar"
+                  [class.is-flipped]="heroAwayFlipped()"
+                  [class.is-top4]="isTeamTopFour(match.awayTeamName)"
+                  (click)="toggleHeroAvatar('away')"
+                  [title]="heroAwayFlipped() ? 'Kliknij, aby pokazać logo' : 'Kliknij, aby zobaczyć miejsce w tabeli'"
+                  [attr.aria-label]="heroAwayFlipped() ? 'Pokaż logo zespołu' : 'Pokaż miejsce w tabeli'"
+                >
+                  <div class="avatar-flip-card">
+                    <div class="avatar-face avatar-front">
+                      <img
+                        [src]="teamLogoUrl(match.awayTeamName)"
+                        [alt]="teamName(match.awayTeamName)"
+                        class="avatar-logo-img"
+                        (error)="$any($event.target).style.display = 'none'"
+                      />
+                      @if (!isHome(match)) {
+                        <span class="avatar-letter">U</span>
+                      } @else {
+                        <span class="avatar-letter">{{ teamName(match.awayTeamName).charAt(0) }}</span>
+                      }
+                    </div>
+                    <div class="avatar-face avatar-back">
+                      <span class="standing-rank-num">
+                        <span class="rank-hash">#</span>{{ teamStandingRankNumber(match.awayTeamName) }}
+                      </span>
+                      <span class="standing-rank-label">MSC</span>
+                    </div>
+                  </div>
+                </button>
+                <strong class="team-title">
+                  {{ !isHome(match) ? 'UNITED ŚRODA ŚL.' : teamName(match.awayTeamName) }}
+                </strong>
+                <span class="team-role">GOŚĆ</span>
+              </div>
+            </div>
+
+            <div class="showcase-footer">
+              <div class="venue-info">
+                <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16" class="pin-icon">
+                  <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd" />
+                </svg>
+                <span [title]="matchPlace(match, 'Hala Sportowa OSiR, Środa Śląska', 'Mecz na parkiecie rywala')">
+                  {{ matchPlace(match, 'Hala Sportowa OSiR, Środa Śląska', 'Mecz na parkiecie rywala') }}
+                </span>
+              </div>
+              <a href="#mecze" class="showcase-link">
+                <span>Pełny terminarz</span>
+                <span class="arrow">→</span>
+              </a>
+            </div>
+          } @else if (loading()) {
+            <div class="showcase-loading">
+              <div class="spinner"></div>
+              <p>Pobieranie terminarza…</p>
+            </div>
+          } @else {
+            <div class="showcase-empty">
+              <p>Brak zaplanowanych spotkań w najbliższym czasie.</p>
+            </div>
+          }
+        </aside>
+      </div>
+    </div>
+  </section>
+
+  <!-- RESULTS SECTION: Only for United_Środa_Śląska -->
+  <section id="wyniki" class="section section-results">
+    <div class="section-container">
+      <div class="section-header-block">
+        <div class="header-titles">
+          <p class="section-eyebrow">SEZON 2026/27</p>
+          <h2 class="section-title">OSTATNIE <span class="highlight-green">WYNIKI</span></h2>
+          <p class="section-sub">Rozegrane spotkania United Środa Śląska w II Lidze Dolnośląskiej.</p>
+        </div>
+      </div>
+
+      <div class="results-cards-list">
+        @for (result of visibleResults(); track result.matchId) {
+          <article
+            class="result-card"
+            [class.win-card]="isUnitedWin(result)"
+            [class.loss-card]="!isUnitedWin(result)"
+            [class.is-expanded]="isResultExpanded(result.matchId)"
+            (click)="toggleResultDetails(result.matchId)"
+            tabindex="0"
+            role="button"
+            [attr.aria-expanded]="isResultExpanded(result.matchId)"
+            (keydown.enter)="toggleResultDetails(result.matchId)"
+            (keydown.space)="toggleResultDetails(result.matchId); $event.preventDefault()"
+          >
+            <div class="result-card-main">
+              <div class="result-date-col">
+                <span class="result-date">{{ matchDate(result) | date: 'd.MM.yyyy' }}</span>
+                <span class="result-venue-tag">{{ isHome(result) ? 'MECZ DOMOWY' : 'WYJAZD' }}</span>
+              </div>
+
+              <div class="result-teams-col">
+                <div class="result-team-entry home-team" [class.winner]="isHome(result) && isUnitedWin(result)" [class.is-our-team]="isHome(result)">
+                  <img
+                    [src]="teamLogoUrl(result.homeTeamName)"
+                    [alt]="teamName(result.homeTeamName)"
+                    class="team-logo-inline"
+                    (error)="$any($event.target).style.display = 'none'"
+                  />
+                  <span class="result-team-name">{{ isHome(result) ? 'United Środa Śląska' : teamName(result.homeTeamName) }}</span>
+                </div>
+
+                <div class="result-score-box">
+                  <span class="score-display">{{ matchScoreDisplay(result) }}</span>
+                </div>
+
+                <div class="result-team-entry away-team" [class.winner]="!isHome(result) && isUnitedWin(result)" [class.is-our-team]="!isHome(result)">
+                  <span class="result-team-name">{{ !isHome(result) ? 'United Środa Śląska' : teamName(result.awayTeamName) }}</span>
+                  <img
+                    [src]="teamLogoUrl(result.awayTeamName)"
+                    [alt]="teamName(result.awayTeamName)"
+                    class="team-logo-inline"
+                    (error)="$any($event.target).style.display = 'none'"
+                  />
+                </div>
+              </div>
+
+              <div class="result-status-col">
+                <div class="status-badges-group">
+                  <span class="status-badge-finished">ZAKOŃCZONY</span>
+                  <span class="outcome-badge" [class.win-badge]="isUnitedWin(result)" [class.loss-badge]="!isUnitedWin(result)">
+                    {{ isUnitedWin(result) ? 'WYGRANA' : 'PORAŻKA' }}
+                  </span>
+                </div>
+                <div class="result-expand-toggle">
+                  <span class="toggle-hint">{{ isResultExpanded(result.matchId) ? 'Zwiń statystyki' : 'Rozwiń statystyki szczegółowe' }}</span>
+                  <svg viewBox="0 0 20 20" fill="currentColor" class="expand-chevron" [class.is-expanded]="isResultExpanded(result.matchId)" aria-hidden="true">
+                    <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                  </svg>
+                </div>
+              </div>
+            </div>
+
+            @if (isResultExpanded(result.matchId)) {
+              <div class="result-sets-details" (click)="$event.stopPropagation()">
+                <div class="sets-header">
+                  <div class="sets-team-side host-side">
+                    <span class="team-label">{{ isHome(result) ? 'United Środa Śląska' : teamName(result.homeTeamName) }}</span>
+                  </div>
+                  <div class="sets-header-center">
+                    <span class="sets-badge-title">STATYSTYKI MECZOWE</span>
+                    <span class="sets-scale-hint">Różnica punktowa w setach</span>
+                  </div>
+                  <div class="sets-team-side away-side">
+                    <span class="team-label">{{ !isHome(result) ? 'United Środa Śląska' : teamName(result.awayTeamName) }}</span>
+                  </div>
+                </div>
+
+                <div class="sets-list">
+                  @for (set of getMatchSetDetails(result); track set.setNumber) {
+                    <div class="set-row">
+                      <div class="set-values-line">
+                        <span
+                          class="set-num host-num"
+                          [class.score-higher]="set.hostScore > set.awayScore"
+                          [class.score-lower]="set.hostScore < set.awayScore"
+                        >
+                          {{ set.hostScore }}
+                        </span>
+
+                        <span class="set-center-label">Set {{ set.setNumber }}</span>
+
+                        <span
+                          class="set-num away-num"
+                          [class.score-higher]="set.awayScore > set.hostScore"
+                          [class.score-lower]="set.awayScore < set.hostScore"
+                        >
+                          {{ set.awayScore }}
+                        </span>
+                      </div>
+
+                      <div class="stat-bar-track">
+                        <div class="bar-half host-half">
+                          <div
+                            class="bar-fill"
+                            [class.fill-green]="set.unitedWon"
+                            [class.fill-red]="!set.unitedWon"
+                            [style.width.%]="set.hostPercent"
+                          ></div>
+                        </div>
+                        <div class="bar-divider"></div>
+                        <div class="bar-half away-half">
+                          <div
+                            class="bar-fill"
+                            [class.fill-green]="set.unitedWon"
+                            [class.fill-red]="!set.unitedWon"
+                            [style.width.%]="set.awayPercent"
+                          ></div>
+                        </div>
+                      </div>
+                    </div>
+                  } @empty {
+                    <div class="sets-empty">Brak informacji na temat statystyk meczowych</div>
+                  }
+                </div>
+              </div>
+            }
+          </article>
+        } @empty {
+          <div class="empty-state-box">
+            <p>Nie rozegrano jeszcze żadnych spotkań.</p>
+          </div>
+        }
+      </div>
+
+      @if (results().length > 3) {
+        <div class="expand-actions">
+          <button
+            type="button"
+            class="btn btn-glass btn-expand"
+            (click)="toggleResultsExpand()"
+            [attr.aria-expanded]="resultsExpanded()"
+          >
+            @if (!resultsExpanded()) {
+              <span>Rozwiń wszystkie wyniki ({{ results().length }})</span>
+              <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16" class="expand-icon" aria-hidden="true">
+                <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+              </svg>
+            } @else {
+              <span>Zwiń wyniki</span>
+              <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16" class="expand-icon" aria-hidden="true">
+                <path fill-rule="evenodd" d="M14.707 12.707a1 1 0 01-1.414 0L10 9.414l-3.293 3.293a1 1 0 01-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 010 1.414z" clip-rule="evenodd" />
+              </svg>
+            }
+          </button>
+        </div>
+      }
+    </div>
+  </section>
+
+  <!-- UPCOMING MATCHES SECTION: Core requirement, United matches only -->
+  <section id="mecze" class="section section-fixtures">
+    <div class="section-container">
+      <div class="section-header-block">
+        <div class="header-titles">
+          <p class="section-eyebrow">SEZON 2026/27</p>
+          <h2 class="section-title">NADCHODZĄCE <span class="highlight-green">MECZE</span></h2>
+          <p class="section-sub">
+            Spotkania ligowe United Środa Śląska w ramach II Ligi Dolnośląskiej mężczyzn. Wspieraj nas na trybunach 1 meczach domowych i na wyjazdowych!
+          </p>
+        </div>
+
+        <!-- Fixture Filters -->
+        <div class="filter-pills" role="tablist" aria-label="Filtruj mecze">
+          <button
+            type="button"
+            class="filter-pill"
+            [class.active]="activeFilter() === 'all'"
+            (click)="setFilter('all')"
+          >
+            Wszystkie ({{ fixtures().length }})
+          </button>
+          <button
+            type="button"
+            class="filter-pill"
+            [class.active]="activeFilter() === 'home'"
+            (click)="setFilter('home')"
+          >
+            Domowe
+          </button>
+          <button
+            type="button"
+            class="filter-pill"
+            [class.active]="activeFilter() === 'away'"
+            (click)="setFilter('away')"
+          >
+            Wyjazdowe
+          </button>
+        </div>
+      </div>
+
+      @if (error()) {
+        <div class="alert-banner">
+          <p>Wystąpił błąd podczas ładowania danych. Sprawdź połączenie.</p>
+          <button type="button" class="btn btn-sm" (click)="refreshData()">Spróbuj ponownie</button>
+        </div>
+      }
+
+      @if (loading() && fixtures().length === 0) {
+        <div class="fixtures-grid">
+          @for (i of [1,2,3,4,5,6]; track i) {
+            <div class="match-card skeleton-card"></div>
+          }
+        </div>
+      } @else {
+        <div class="fixtures-grid">
+          @for (match of visibleFixtures(); track match.matchId; let idx = $index) {
+            <article
+              class="match-card"
+              [class.first-card]="idx === 0"
+              [class.is-flipped]="isCardFlipped(match.matchId)"
+              (click)="toggleCardStats(match.matchId)"
+              tabindex="0"
+              (keydown.enter)="toggleCardStats(match.matchId)"
+              (keydown.space)="toggleCardStats(match.matchId); $event.preventDefault()"
+              [attr.aria-label]="isCardFlipped(match.matchId) ? 'Kliknij, aby wrócić do meczu' : 'Kliknij aby sprawdzić statystyki przedmeczowe'"
+              role="button"
+            >
+              <div class="match-card-inner">
+                <!-- FRONT FACE: Match details -->
+                <div class="card-face card-face-front">
+                  <div class="card-meta">
+                    <div class="date-badge">
+                      <span class="day-number">{{ matchDate(match) | date: 'd' }}</span>
+                      <span class="month-name">{{ matchDate(match) | date: 'LLL' }}</span>
+                    </div>
+                    <div class="match-round-tag">
+                      <span class="round-label">Mecz #{{ match.matchId }}</span>
+                      <span class="year-label">{{ matchDate(match) | date: 'yyyy' }}</span>
+                    </div>
+                    <div class="location-badge" [class.home]="isHome(match)" [class.away]="!isHome(match)">
+                      {{ isHome(match) ? 'DOM' : 'WYJAZD' }}
+                    </div>
+                  </div>
+
+                  <div class="card-teams-lockup">
+                    <div class="team-row" [class.is-our-team]="isHome(match)">
+                      <img
+                        [src]="teamLogoUrl(match.homeTeamName)"
+                        [alt]="teamName(match.homeTeamName)"
+                        class="team-logo-inline"
+                        (error)="$any($event.target).style.display = 'none'"
+                      />
+                      <span class="team-dot" [class.active-dot]="isHome(match)"></span>
+                      <span class="team-name">{{ isHome(match) ? 'United Środa Śląska' : teamName(match.homeTeamName) }}</span>
+                    </div>
+                    <div class="versus-divider">
+                      <span>vs</span>
+                    </div>
+                    <div class="team-row" [class.is-our-team]="!isHome(match)">
+                      <img
+                        [src]="teamLogoUrl(match.awayTeamName)"
+                        [alt]="teamName(match.awayTeamName)"
+                        class="team-logo-inline"
+                        (error)="$any($event.target).style.display = 'none'"
+                      />
+                      <span class="team-dot" [class.active-dot]="!isHome(match)"></span>
+                      <span class="team-name">{{ !isHome(match) ? 'United Środa Śląska' : teamName(match.awayTeamName) }}</span>
+                    </div>
+                  </div>
+
+                  <div class="card-footer">
+                    <div class="venue-location" [title]="matchPlace(match)">
+                      <svg viewBox="0 0 20 20" fill="currentColor" width="14" height="14" class="inline-icon">
+                        <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd" />
+                      </svg>
+                      <span>{{ matchPlace(match) }}</span>
+                    </div>
+                    <span
+                      class="status-indicator"
+                      [class.has-time]="hasSpecificTime(match)"
+                      [class.no-time]="!hasSpecificTime(match)"
+                    >
+                      {{ matchHourDisplay(match) }}
+                    </span>
+                  </div>
+
+                  <div class="card-flip-hint">
+                    <span class="hint-text">Kliknij aby sprawdzić statystyki przedmeczowe</span>
+                    <svg viewBox="0 0 20 20" fill="currentColor" width="13" height="13" class="hint-icon" aria-hidden="true">
+                      <path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clip-rule="evenodd" />
+                    </svg>
+                  </div>
+                </div>
+
+                <!-- BACK FACE: Team stats comparison -->
+                <div class="card-face card-face-back">
+                  <!-- On top: Team Logos (no names). Host on left, Away on right. Separated. -->
+                  <div class="stats-top-bar">
+                    <img
+                      [src]="teamLogoUrl(match.homeTeamName)"
+                      [alt]="teamName(match.homeTeamName)"
+                      class="stats-team-logo host-logo"
+                      [class.is-our-team]="isHome(match)"
+                      (error)="$any($event.target).style.display = 'none'"
+                    />
+
+                    <div class="stats-center-badge">
+                      <span class="stats-heading">STATYSTYKI</span>
+                      <span class="stats-sub-hint">Kliknij, aby wrócić</span>
+                    </div>
+
+                    <img
+                      [src]="teamLogoUrl(match.awayTeamName)"
+                      [alt]="teamName(match.awayTeamName)"
+                      class="stats-team-logo away-logo"
+                      [class.is-our-team]="!isHome(match)"
+                      (error)="$any($event.target).style.display = 'none'"
+                    />
+                  </div>
+
+                  <!-- Below: Stats list -->
+                  <div class="stats-grid">
+                    <!-- Live Form row -->
+                    <div class="stat-row form-row">
+                      <div class="stat-values-line">
+                        <div class="form-badges-inline host-form">
+                          @for (res of getTeamForm(match.homeTeamName); track $index) {
+                            <span
+                              class="form-badge-mini"
+                              [class.is-latest]="$first"
+                              [class.form-win]="res === 'W'"
+                              [class.form-loss]="res === 'P'"
+                              [title]="$first ? (res === 'W' ? 'Ostatni mecz: Wygrana' : 'Ostatni mecz: Porażka') : (res === 'W' ? 'Wygrana' : 'Porażka')"
+                            >
+                              {{ res }}
+                            </span>
+                          } @empty {
+                            <span class="form-empty">—</span>
+                          }
+                        </div>
+                        <span class="stat-name">FORMA</span>
+                        <div class="form-badges-inline away-form">
+                          @for (res of getTeamForm(match.awayTeamName); track $index) {
+                            <span
+                              class="form-badge-mini"
+                              [class.is-latest]="$first"
+                              [class.form-win]="res === 'W'"
+                              [class.form-loss]="res === 'P'"
+                              [title]="$first ? (res === 'W' ? 'Ostatni mecz: Wygrana' : 'Ostatni mecz: Porażka') : (res === 'W' ? 'Wygrana' : 'Porażka')"
+                            >
+                              {{ res }}
+                            </span>
+                          } @empty {
+                            <span class="form-empty">—</span>
+                          }
+                        </div>
+                      </div>
+                    </div>
+
+                    @for (stat of getMatchStats(match); track stat.label) {
+                      <div class="stat-row" [class.with-bar]="stat.hasBar">
+                        <div class="stat-values-line">
+                          <span class="stat-num host-stat" [class.is-green]="stat.hostColor === 'green'" [class.is-grey]="stat.hostColor === 'grey'">
+                            {{ stat.hostValue }}
+                          </span>
+                          <span class="stat-name">{{ stat.label }}</span>
+                          <span class="stat-num away-stat" [class.is-green]="stat.awayColor === 'green'" [class.is-grey]="stat.awayColor === 'grey'">
+                            {{ stat.awayValue }}
+                          </span>
+                        </div>
+
+                        @if (stat.hasBar) {
+                          <div class="stat-bar-track">
+                            <div class="bar-half host-half">
+                              <div
+                                class="bar-fill"
+                                [class.fill-green]="stat.hostColor === 'green'"
+                                [class.fill-grey]="stat.hostColor === 'grey'"
+                                [style.width.%]="stat.hostBarPercent"
+                              ></div>
+                            </div>
+                            <div class="bar-divider"></div>
+                            <div class="bar-half away-half">
+                              <div
+                                class="bar-fill"
+                                [class.fill-green]="stat.awayColor === 'green'"
+                                [class.fill-grey]="stat.awayColor === 'grey'"
+                                [style.width.%]="stat.awayBarPercent"
+                              ></div>
+                            </div>
+                          </div>
+                        }
+                      </div>
+                    }
+                  </div>
+                </div>
+              </div>
+            </article>
+          } @empty {
+            <div class="empty-state-box">
+              <p>Brak meczów spełniających wybrane kryteria.</p>
+            </div>
+          }
+        </div>
+
+        @if (filteredFixtures().length > 3) {
+          <div class="expand-actions">
+            <button
+              type="button"
+              class="btn btn-glass btn-expand"
+              (click)="toggleFixturesExpand()"
+              [attr.aria-expanded]="fixturesExpanded()"
+            >
+              @if (!fixturesExpanded()) {
+                <span>Rozwiń wszystkie mecze ({{ filteredFixtures().length }})</span>
+                <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16" class="expand-icon" aria-hidden="true">
+                  <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                </svg>
+              } @else {
+                <span>Zwiń mecze</span>
+                <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16" class="expand-icon" aria-hidden="true">
+                  <path fill-rule="evenodd" d="M14.707 12.707a1 1 0 01-1.414 0L10 9.414l-3.293 3.293a1 1 0 01-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 010 1.414z" clip-rule="evenodd" />
+                </svg>
+              }
+            </button>
+          </div>
+        }
+      }
+    </div>
+  </section>
+
+  <!-- STANDINGS SECTION: Explicitly preserved as requested -->
+  <section id="tabela" class="section section-standings">
+    <div class="section-container">
+      <div class="section-header-block">
+        <div class="header-titles">
+          <p class="section-eyebrow">SEZON 2026/27</p>
+          <h2 class="section-title">TABELA <span class="highlight-green">LIGOWA</span></h2>
+          <p class="section-sub">
+            Oficjalna klasyfikacja drużyn II Ligi Dolnośląskiej.
+          </p>
+        </div>
+      </div>
+
+      <div class="standings-card-container">
+        <div class="table-responsive">
+          <table class="sports-table" aria-label="Tabela ligowa">
+            <thead>
+              <tr>
+                <th class="th-rank">POZ</th>
+                <th class="th-team">DRUŻYNA</th>
+                <th class="th-stat">M</th>
+                <th class="th-stat th-points">PKT</th>
+                <th class="th-stat">ZWYC</th>
+                <th class="th-stat">SETY +</th>
+                <th class="th-stat">SETY -</th>
+                <th class="th-stat" title="Współczynnik setów">WSP. SET</th>
+                <th class="th-stat" title="Współczynnik punktów">WSP. PKT</th>
+                <th class="th-stat th-form" title="Ostatnie 5 meczów (od lewej: najświeższy)">FORMA</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (team of standings(); track team.teamName) {
+                <tr
+                  [class.top4-row]="isTopFour(team.rank)"
+                  [class.united-row]="isUnited(team.teamName)"
+                >
+                  <td class="td-rank">
+                    <span
+                      class="rank-badge"
+                      [class.top4-rank]="isTopFour(team.rank)"
+                      [title]="isTopFour(team.rank) ? 'Miejsce premiowane awansem do fazy Play-Off' : ''"
+                    >
+                      {{ team.rank }}
+                    </span>
+                  </td>
+                  <td class="td-team">
+                    <div class="team-cell">
+                      <img
+                        [src]="teamLogoUrl(team.teamName)"
+                        [alt]="teamName(team.teamName)"
+                        class="table-team-logo"
+                        (error)="$any($event.target).style.display = 'none'"
+                      />
+                      <span class="team-name-text">{{ teamName(team.teamName) }}</span>
+                    </div>
+                  </td>
+                  <td class="td-stat">{{ team.matchesPlayed }}</td>
+                  <td class="td-stat td-points"><strong>{{ team.points }}</strong></td>
+                  <td class="td-stat">{{ team.wins }}</td>
+                  <td class="td-stat">{{ team.setsWon }}</td>
+                  <td class="td-stat">{{ team.setsLost }}</td>
+                  <td class="td-stat td-ratio">{{ team.setsRatio | number:'1.2-2' }}</td>
+                  <td class="td-stat td-ratio">{{ team.pointRatio | number:'1.2-2' }}</td>
+                  <td class="td-stat td-form">
+                    <div class="form-badges-list">
+                      @for (res of getTeamForm(team.teamName); track $index) {
+                        <span
+                          class="form-badge"
+                          [class.is-latest]="$first"
+                          [class.form-win]="res === 'W'"
+                          [class.form-loss]="res === 'P'"
+                          [title]="$first ? (res === 'W' ? 'Ostatni mecz: Wygrana' : 'Ostatni mecz: Porażka') : (res === 'W' ? 'Wygrana' : 'Porażka')"
+                        >
+                          {{ res }}
+                        </span>
+                      } @empty {
+                        <span class="form-empty">—</span>
+                      }
+                    </div>
+                  </td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td colspan="10" class="table-empty">Ładowanie tabeli...</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+
+        <div class="table-footer-legend">
+          <div class="legend-item">
+            <span class="legend-indicator top-indicator"></span>
+            <span>Miejsce premiowane awansem do fazy Play-Off</span>
+          </div>
+          <div class="legend-item">
+            <span class="form-badge-mini form-win">W</span>
+            <span class="form-badge-mini form-loss">P</span>
+            <span>Forma: W – wygrana, P – porażka (od lewej: najświeższy)</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ABOUT CLUB SECTION: Inspired by Screenshot 3 with 01/02/03 steps & green neon glow -->
+  <section id="klub" class="section section-club">
+    <div class="section-container">
+      <div class="section-header-block centered">
+        <p class="section-eyebrow">FILOZOFIA I WARTOŚCI</p>
+        <h2 class="section-title">WIĘCEJ NIŻ <span class="highlight-green">KLUB</span></h2>
+        <p class="section-sub max-w-2xl">
+          Budujemy silną siatkówkę w Środzie Śląskiej. Każdy mecz to wspólne święto zawodników, sztabu i kibiców.
+        </p>
+      </div>
+
+      <div class="club-features-grid">
+        <!-- Feature 1 -->
+        <div class="feature-card">
+          <div class="feature-watermark">01</div>
+          <div class="feature-icon-wrapper">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="feature-svg">
+              <circle cx="12" cy="12" r="10" />
+              <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+              <path d="M2 12h20" />
+            </svg>
+          </div>
+          <h3 class="feature-title">Pasja i Walka</h3>
+          <p class="feature-desc">
+            Walczymy o każdą piłkę bez kompromisów. Każdy punkt to wynik determinacji, litrów potu na treningach i charakteru drużyny.
+          </p>
+        </div>
+
+        <!-- Feature 2 -->
+        <div class="feature-card">
+          <div class="feature-watermark">02</div>
+          <div class="feature-icon-wrapper">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="feature-svg">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+              <circle cx="9" cy="7" r="4" />
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+              <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+            </svg>
+          </div>
+          <h3 class="feature-title">Drużyna i Zaufanie</h3>
+          <p class="feature-desc">
+            Siatkówka to gra zespołowa w najczystszej postaci. Asekuracja, komunikacja i wzajemne wsparcie dają nam przewagę w trudnych momentach.
+          </p>
+        </div>
+
+        <!-- Feature 3 -->
+        <div class="feature-card">
+          <div class="feature-watermark">03</div>
+          <div class="feature-icon-wrapper">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="feature-svg">
+              <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" />
+              <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18" />
+              <path d="M4 22h16" />
+              <path d="M10 14.66V17c0 .55-.45 1-1 1H7" />
+              <path d="M14 14.66V17c0 .55.45 1 1 1h2" />
+              <path d="M18 2H6v7a6 6 0 0 0 12 0V2z" />
+            </svg>
+          </div>
+          <h3 class="feature-title">Społeczność Kibiców</h3>
+          <p class="feature-desc">
+            Trybuny w Środzie Śląskiej to nasz siódmy zawodnik. Tworzymy niezapomniane sportowe emocje dla mieszkańców całego regionu.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CONTACT & JOIN SECTION -->
+  <section id="kontakt" class="section section-contact">
+    <div class="section-container">
+      <div class="contact-card">
+        <div class="contact-glow"></div>
+        <div class="contact-content">
+          <p class="section-eyebrow">LET'S UNITE!</p>
+          <h2 class="contact-headline">NAWIĄŻMY <span class="highlight-green">WSPÓŁPRACĘ</span></h2>
+          <p class="contact-text">
+            Chcesz przyczynić się do sukcesu wspierając klub lub nawiązując współpracę? Zapraszamy do kontaktu.
+          </p>
+
+          <div class="contact-grid-info">
+            <div class="info-item">
+              <span class="info-label">KONTAKT MAILOWY</span>
+              <strong class="info-val">united.srodaslaska&#64;gmail.com</strong>
+              <span class="info-sub">Odpowiadamy w ciągu 24h</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">HALA DOMOWA</span>
+              <strong class="info-val">Hala Sportowa przy Szkole Podstawowej nr 3<br>im. Władysława Broniewskiego<br>w Środzie Śląskiej</strong>
+              <span class="info-sub">ul. Górna 1, 55-300 Środa Śląska</span>
+            </div>
+          </div>
+
+          <div class="contact-action">
+            <a class="btn btn-primary" href="mailto:united.srodaslaska@gmail.com">
+              <span>Napisz do nas</span>
+              <span class="arrow">↗</span>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <div class="footer-container">
+    <div class="footer-top">
+      <div class="footer-brand">
+        <a class="brand" href="#start">
+          <div class="brand-crest small">
+            <img
+              [src]="teamLogoUrl('United_Środa_Śląska')"
+              alt="KS United Środa Śląska logo"
+              class="brand-crest-img"
+            />
+          </div>
+          <div class="brand-text">
+            <span class="brand-title">UNITED</span>
+            <span class="brand-sub">ŚRODA ŚLĄSKA</span>
+          </div>
+        </a>
+        <p class="footer-motto">
+          Oficjalny serwis klubu siatkarskiego KS United Środa Śląska.
+        </p>
+      </div>
+
+      <div class="footer-links">
+        <div class="link-col">
+          <strong>Nawigacja</strong>
+          <a href="#start">Start</a>
+          <a href="#wyniki">Wyniki</a>
+          <a href="#mecze">Terminarz</a>
+          <a href="#tabela">Tabela</a>
+        </div>
+        <div class="link-col">
+          <strong>Klub</strong>
+          <a href="#klub">O Drużynie</a>
+          <a href="#kontakt">Kontakt</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer-bottom">
+      <span>© 2026 KS United Środa Śląska. Wszystkie prawa zastrzeżone.</span>
+      <span class="developed-tag">Oficjalna strona internetowa portal klubu</span>
+    </div>
+  </div>
+</footer>

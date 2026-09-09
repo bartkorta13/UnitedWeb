@@ -123,3 +123,122 @@ output "api_url" {
   description = "Base URL for your API Gateway stage."
   value       = aws_apigatewayv2_api.http_api.api_endpoint
 }
+
+# ------------------------------------------------------------------------------
+# 8. S3 Bucket for Media Assets (Private storage)
+# ------------------------------------------------------------------------------
+resource "aws_s3_bucket" "assets" {
+  bucket_prefix = "united-league-assets-"
+  force_destroy = true
+
+  tags = {
+    Project     = "UnitedWeb"
+    Environment = "production"
+  }
+}
+
+# Block all direct public access (CloudFront will access via OAC)
+resource "aws_s3_bucket_public_access_block" "assets_access" {
+  bucket = aws_s3_bucket.assets.id
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+# ------------------------------------------------------------------------------
+# 9. CloudFront Origin Access Control (OAC)
+# ------------------------------------------------------------------------------
+resource "aws_cloudfront_origin_access_control" "assets_oac" {
+  name                              = "united-assets-oac"
+  description                       = "Origin Access Control for United Assets S3 bucket"
+  origin_access_control_origin_type = "s3"
+  signing_behavior                  = "always"
+  signing_protocol                  = "sigv4"
+}
+
+# Fetch AWS Managed Cache Policy for optimized asset delivery
+data "aws_cloudfront_cache_policy" "caching_optimized" {
+  name = "Managed-CachingOptimized"
+}
+
+# ------------------------------------------------------------------------------
+# 10. CloudFront Distribution (Global CDN)
+# ------------------------------------------------------------------------------
+resource "aws_cloudfront_distribution" "assets_cdn" {
+  enabled             = true
+  is_ipv6_enabled     = true
+  comment             = "CloudFront CDN for United Assets"
+  price_class         = "PriceClass_100" # Europe, USA, Canada
+
+  origin {
+    domain_name              = aws_s3_bucket.assets.bucket_regional_domain_name
+    origin_id                = "S3-${aws_s3_bucket.assets.id}"
+    origin_access_control_id = aws_cloudfront_origin_access_control.assets_oac.id
+  }
+
+  default_cache_behavior {
+    target_origin_id       = "S3-${aws_s3_bucket.assets.id}"
+    viewer_protocol_policy = "redirect-to-https"
+    allowed_methods        = ["GET", "HEAD", "OPTIONS"]
+    cached_methods         = ["GET", "HEAD"]
+    cache_policy_id        = data.aws_cloudfront_cache_policy.caching_optimized.id
+    compress               = true
+  }
+
+  restrictions {
+    geo_restriction {
+      restriction_type = "none"
+    }
+  }
+
+  viewer_certificate {
+    cloudfront_default_certificate = true
+  }
+
+  tags = {
+    Project     = "UnitedWeb"
+    Environment = "production"
+  }
+}
+
+# ------------------------------------------------------------------------------
+# 11. S3 Bucket Policy: Only CloudFront can read files
+# ------------------------------------------------------------------------------
+resource "aws_s3_bucket_policy" "assets_oac_policy" {
+  bucket = aws_s3_bucket.assets.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid       = "AllowCloudFrontServicePrincipalReadOnly"
+        Effect    = "Allow"
+        Principal = {
+          Service = "cloudfront.amazonaws.com"
+        }
+        Action   = "s3:GetObject"
+        Resource = "${aws_s3_bucket.assets.arn}/*"
+        Condition = {
+          StringEquals = {
+            "AWS:SourceArn" = aws_cloudfront_distribution.assets_cdn.arn
+          }
+        }
+      }
+    ]
+  })
+}
+
+# ------------------------------------------------------------------------------
+# 12. Asset Outputs
+# ------------------------------------------------------------------------------
+output "assets_bucket_name" {
+  description = "S3 bucket name to upload assets/logos to via AWS CLI or Console"
+  value       = aws_s3_bucket.assets.id
+}
+
+output "assets_cdn_url" {
+  description = "CloudFront CDN Base URL for your frontend"
+  value       = "https://${aws_cloudfront_distribution.assets_cdn.domain_name}"
+}
