@@ -115,7 +115,7 @@
             </div>
             @if (nextMatch(); as match) {
               <span class="venue-badge" [class.home-badge]="isHome(match)" [class.away-badge]="!isHome(match)">
-                {{ isHome(match) ? 'MECZ DOMOWY' : 'WYJAZD' }}
+                {{ isHome(match) ? 'MECZ DOMOWY' : 'MECZ WYJAZDOWY' }}
               </span>
             }
           </div>
@@ -305,7 +305,7 @@
 
               <div class="result-status-col">
                 <div class="status-badges-group">
-                  <span class="status-badge-finished">ZAKOŃCZONY</span>
+                  <span class="status-badge-finished">REZULTAT</span>
                   <span class="outcome-badge" [class.win-badge]="isUnitedWin(result)" [class.loss-badge]="!isUnitedWin(result)">
                     {{ isUnitedWin(result) ? 'WYGRANA' : 'PORAŻKA' }}
                   </span>
