@@ -1087,5 +1087,282 @@ describe('App', () => {
       expect(fixture.nativeElement.querySelector('.result-sets-details')).toBeFalsy();
     });
   });
+
+  describe('Skład drużyny - Team roster', () => {
+    it('should map position labels and badge classes correctly', () => {
+      const fixture = TestBed.createComponent(App);
+      const app = fixture.componentInstance;
+
+      expect(app['positionLabel']('SETTER')).toBe('Rozgrywający');
+      expect(app['positionLabel']('OUTSIDE')).toBe('Przyjmujący');
+      expect(app['positionLabel']('OPPOSITE')).toBe('Atakujący');
+      expect(app['positionLabel']('MIDDLE')).toBe('Środkowy');
+      expect(app['positionLabel']('LIBERO')).toBe('Libero');
+      expect(app['positionLabel']('COACH')).toBe('Trener');
+
+      expect(app['positionBadgeClass']('SETTER')).toBe('badge-setter');
+      expect(app['positionBadgeClass']('OUTSIDE')).toBe('badge-outside');
+      expect(app['positionBadgeClass']('OPPOSITE')).toBe('badge-opposite');
+      expect(app['positionBadgeClass']('MIDDLE')).toBe('badge-middle');
+      expect(app['positionBadgeClass']('LIBERO')).toBe('badge-libero');
+      expect(app['positionBadgeClass']('COACH')).toBe('badge-coach');
+    });
+
+    it('should filter visible roster by position', () => {
+      const fixture = TestBed.createComponent(App);
+      const app = fixture.componentInstance;
+      const api = TestBed.inject(LeagueApiService);
+
+      const fakeRoster = [
+        {
+          id: 'p1',
+          firstName: 'Jan',
+          lastName: 'Kowalski',
+          position: 'SETTER' as const,
+          number: 7,
+          height: 192,
+          attackRange: 330,
+          age: 24,
+          isCaptain: true,
+        },
+        {
+          id: 'p2',
+          firstName: 'Piotr',
+          lastName: 'Nowak',
+          position: 'OUTSIDE' as const,
+          number: 10,
+          height: 198,
+          attackRange: 345,
+          age: 22,
+          isCaptain: false,
+        },
+        {
+          id: 'p3',
+          firstName: 'Marek',
+          lastName: 'Zieliński',
+          position: 'COACH' as const,
+          number: 0,
+          height: 185,
+          age: 45,
+          isCaptain: false,
+        },
+      ];
+
+      api.roster.set(fakeRoster);
+      expect(app['visibleRoster']().length).toBe(3);
+
+      // Filter SETTER
+      app['setRosterFilter']('SETTER');
+      expect(app['visibleRoster']().length).toBe(1);
+      expect(app['visibleRoster']()[0].lastName).toBe('Kowalski');
+
+      // Filter COACH
+      app['setRosterFilter']('COACH');
+      expect(app['visibleRoster']().length).toBe(1);
+      expect(app['visibleRoster']()[0].lastName).toBe('Zieliński');
+
+      // Filter ALL
+      app['setRosterFilter']('all');
+      expect(app['visibleRoster']().length).toBe(3);
+    });
+
+    it('should sort roster cards ascending by player numbers with coach always at the end', () => {
+      const fixture = TestBed.createComponent(App);
+      const app = fixture.componentInstance;
+      const api = TestBed.inject(LeagueApiService);
+
+      api.roster.set([
+        {
+          id: 'c1',
+          firstName: 'Jan',
+          lastName: 'Trener',
+          position: 'COACH',
+          number: 0,
+        },
+        {
+          id: 'p14',
+          firstName: 'Adam',
+          lastName: 'Czternasty',
+          position: 'MIDDLE',
+          number: 14,
+        },
+        {
+          id: 'p2',
+          firstName: 'Piotr',
+          lastName: 'Drugi',
+          position: 'OUTSIDE',
+          number: 2,
+        },
+        {
+          id: 'p8',
+          firstName: 'Kamil',
+          lastName: 'Ósmy',
+          position: 'SETTER',
+          number: 8,
+        },
+      ]);
+
+      const sorted = app['visibleRoster']();
+      expect(sorted.length).toBe(4);
+      expect(sorted[0].number).toBe(2);
+      expect(sorted[0].lastName).toBe('Drugi');
+      expect(sorted[1].number).toBe(8);
+      expect(sorted[1].lastName).toBe('Ósmy');
+      expect(sorted[2].number).toBe(14);
+      expect(sorted[2].lastName).toBe('Czternasty');
+      expect(sorted[3].position).toBe('COACH');
+      expect(sorted[3].lastName).toBe('Trener');
+    });
+
+    it('should render roster cards with details in DOM and respond to filter buttons', () => {
+      const fixture = TestBed.createComponent(App);
+      const api = TestBed.inject(LeagueApiService);
+
+      api.roster.set([
+        {
+          id: 'p1',
+          firstName: 'Michał',
+          lastName: 'Wiśniewski',
+          position: 'SETTER',
+          number: 5,
+          height: 190,
+          attackRange: 330,
+          age: 26,
+          isCaptain: true,
+        },
+        {
+          id: 'p2',
+          firstName: 'Tomasz',
+          lastName: 'Kowalczyk',
+          position: 'MIDDLE',
+          number: 12,
+          height: 202,
+          attackRange: 350,
+          age: 23,
+          isCaptain: false,
+        },
+        {
+          id: 'p3',
+          firstName: 'Marek',
+          lastName: 'Kamiński',
+          position: 'COACH',
+          number: 0,
+          height: 188,
+          age: 48,
+          isCaptain: false,
+        },
+      ]);
+
+      fixture.detectChanges();
+
+      const section = fixture.nativeElement.querySelector('#sklad');
+      expect(section).toBeTruthy();
+
+      const cards = section.querySelectorAll('.player-card');
+      expect(cards.length).toBe(3);
+
+      // Card 1: Captain, Setter
+      expect(cards[0].querySelector('.captain-circle')?.textContent?.trim()).toBe('K');
+      expect(cards[0].querySelector('.player-watermark')?.textContent?.trim()).toBe('05');
+      expect(cards[0].querySelector('.position-badge')?.textContent?.trim()).toBe('Rozgrywający');
+      expect(cards[0].querySelector('.player-first-name')?.textContent?.trim()).toBe('Michał');
+      expect(cards[0].querySelector('.player-last-name')?.textContent?.trim()).toBe('Wiśniewski');
+      expect(cards[0].querySelector('.player-card-number')?.textContent?.trim()).toBe('#5');
+
+      // Card 2: Player number #12
+      expect(cards[1].querySelector('.player-card-number')?.textContent?.trim()).toBe('#12');
+
+      // Card 3: Coach has statistics hidden, TR watermark in gold, and no player-card-number
+      expect(cards[2].querySelector('.position-badge')?.textContent?.trim()).toBe('Trener');
+      expect(cards[2].querySelector('.player-stats-grid')).toBeNull();
+      expect(cards[2].querySelector('.player-watermark')?.textContent?.trim()).toBe('TR');
+      expect(cards[2].querySelector('.player-card-number')).toBeNull();
+
+      // Stats values for Card 1
+      const statValues = cards[0].querySelectorAll('.stat-col-value');
+      expect(statValues[0]?.textContent?.trim()).toBe('190 cm');
+      expect(statValues[1]?.textContent?.trim()).toBe('330 cm');
+      expect(statValues[2]?.textContent?.trim()).toBe('26 l.');
+
+      // Click MIDDLE filter button in DOM
+      const filterButtons = section.querySelectorAll('.filter-pill');
+      const middleButton = Array.from(filterButtons).find(
+        (b: any) => b.textContent?.trim().includes('Środkow')
+      ) as HTMLButtonElement;
+      expect(middleButton).toBeTruthy();
+
+      middleButton.click();
+      fixture.detectChanges();
+
+      const filteredCards = section.querySelectorAll('.player-card');
+      expect(filteredCards.length).toBe(1);
+      expect(filteredCards[0].querySelector('.player-last-name')?.textContent?.trim()).toBe('Kowalczyk');
+    });
+
+    it('should compute player photo URL correctly', () => {
+      const fixture = TestBed.createComponent(App);
+      const app = fixture.componentInstance;
+
+      expect(app['playerPhotoUrl']('bartosz-korta')).toBe('https://d1rm5h55nlqrob.cloudfront.net/roster/bartosz-korta.png');
+      expect(app['playerPhotoUrl']('adam-kowalski')).toBe('https://d1rm5h55nlqrob.cloudfront.net/roster/adam-kowalski.png');
+      expect(app['playerPhotoUrl']('')).toBe('');
+    });
+
+    it('should fallback to silhouette SVG when photo fails to load', () => {
+      const fixture = TestBed.createComponent(App);
+      const app = fixture.componentInstance;
+      const api = TestBed.inject(LeagueApiService);
+
+      api.roster.set([
+        {
+          id: 'bartosz-korta',
+          firstName: 'Bartosz',
+          lastName: 'Korta',
+          position: 'OUTSIDE',
+          number: 1,
+          height: 190,
+          attackRange: 335,
+          age: 27,
+          isCaptain: true,
+        },
+      ]);
+
+      fixture.detectChanges();
+
+      const card = fixture.nativeElement.querySelector('#sklad .player-card');
+      expect(card).toBeTruthy();
+
+      // Initially renders img.player-photo
+      const img = card.querySelector('img.player-photo') as HTMLImageElement;
+      expect(img).toBeTruthy();
+      expect(img.src).toContain('https://d1rm5h55nlqrob.cloudfront.net/roster/bartosz-korta.png');
+      expect(card.querySelector('.player-silhouette')).toBeNull();
+
+      // Simulate img load error
+      img.dispatchEvent(new Event('error'));
+      fixture.detectChanges();
+
+      // Now fallback silhouette is rendered, img is gone
+      expect(card.querySelector('img.player-photo')).toBeNull();
+      const silhouette = card.querySelector('.player-silhouette');
+      expect(silhouette).toBeTruthy();
+      const svg = silhouette?.querySelector('svg.player-svg');
+      expect(svg).toBeTruthy();
+      expect(svg?.getAttribute('viewBox')).toBe('0 0 200 240');
+    });
+
+    it('should show empty state message when roster is empty', () => {
+      const fixture = TestBed.createComponent(App);
+      const api = TestBed.inject(LeagueApiService);
+      api.loading.set(false);
+      api.roster.set([]);
+
+      fixture.detectChanges();
+
+      const emptyState = fixture.nativeElement.querySelector('#sklad .roster-empty-state');
+      expect(emptyState).toBeTruthy();
+      expect(emptyState.textContent).toContain('Skład drużyny na ten sezon zostanie wkrótce opublikowany');
+    });
+  });
 });
 

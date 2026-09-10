@@ -87,6 +87,12 @@ class ApiLambdaHandler(
                         ApiResponse(body = objectMapper.writeValueAsString(matches))
                     }
 
+                    // 4. GET /roster
+                    actualPath.trimEnd('/') == "/roster" -> {
+                        val roster = dynamoRepository.getRoster()
+                        ApiResponse(body = objectMapper.writeValueAsString(roster))
+                    }
+
                     else -> {
                         // Echoes back the path so you know EXACTLY what AWS sent
                         context?.logger?.log("404 Error: Path '$actualPath' did not match.")

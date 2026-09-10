@@ -2,7 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, inject, signal } from '@angular/core';
 import { forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
-import { MatchItem, TeamStanding } from './league.models';
+import { MatchItem, PlayerItem, TeamStanding } from './league.models';
 
 // Terraform output: infrastructure/api_url.
 const API_URL = 'https://601tz51c7e.execute-api.eu-central-1.amazonaws.com';
@@ -16,6 +16,7 @@ export class LeagueApiService {
   readonly results = signal<MatchItem[]>([]);
   readonly allResults = signal<MatchItem[]>([]);
   readonly standings = signal<TeamStanding[]>([]);
+  readonly roster = signal<PlayerItem[]>([]);
   readonly loading = signal(true);
   readonly error = signal(false);
 
@@ -54,12 +55,19 @@ export class LeagueApiService {
           return of<TeamStanding[]>([]);
         })
       ),
+      roster: this.http.get<PlayerItem[]>(`${API_URL}/roster`).pipe(
+        catchError((err) => {
+          console.error('Error fetching roster:', err);
+          return of<PlayerItem[]>([]);
+        })
+      ),
     }).subscribe({
-      next: ({ fixtures, results, allResults, standings }) => {
+      next: ({ fixtures, results, allResults, standings, roster }) => {
         this.fixtures.set(this.sortFixturesChronological(fixtures));
         this.results.set(this.sortResultsChronological(results));
         this.allResults.set(this.sortResultsChronological(allResults));
         this.standings.set(this.filterAndSortStandings(standings));
+        this.roster.set(roster);
         this.loading.set(false);
       },
       error: (err) => {

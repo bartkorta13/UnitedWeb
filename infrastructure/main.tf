@@ -102,6 +102,12 @@ resource "aws_apigatewayv2_route" "get_standings" {
   target    = "integrations/${aws_apigatewayv2_integration.lambda_proxy.id}"
 }
 
+resource "aws_apigatewayv2_route" "get_roster" {
+  api_id    = aws_apigatewayv2_api.http_api.id
+  route_key = "GET /roster"
+  target    = "integrations/${aws_apigatewayv2_integration.lambda_proxy.id}"
+}
+
 # 5. API Gateway Stage
 resource "aws_apigatewayv2_stage" "default_stage" {
   api_id      = aws_apigatewayv2_api.http_api.id

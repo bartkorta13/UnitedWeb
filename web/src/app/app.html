@@ -27,11 +27,12 @@
     </button>
 
     <nav [ngClass]="{ open: menuOpen() }" aria-label="Główna nawigacja">
-      <a href="#start" (click)="closeMenu()">Start</a>
+      <a href="#start" (click)="closeMenu()">Strona Główna</a>
       <a href="#wyniki" (click)="closeMenu()">Wyniki</a>
       <a href="#mecze" (click)="closeMenu()">Terminarz</a>
       <a href="#tabela" (click)="closeMenu()">Tabela</a>
-      <a href="#klub" (click)="closeMenu()">O Klubie</a>
+      <a href="#sklad" (click)="closeMenu()">Skład</a>
+      <a href="#klub" (click)="closeMenu()">O Nas</a>
       <a href="#kontakt" (click)="closeMenu()">Kontakt</a>
       <a class="nav-cta" href="#mecze" (click)="closeMenu()">
         <span>Najbliższy mecz</span>
@@ -793,14 +794,165 @@
     </div>
   </section>
 
+  <!-- TEAM ROSTER SECTION -->
+  <section id="sklad" class="section section-roster">
+    <div class="section-container">
+      <div class="section-header-block">
+        <div class="header-titles">
+          <p class="section-eyebrow">SEZON 2026/27</p>
+          <h2 class="section-title">SKŁAD <span class="highlight-green">ZESPOŁU</span></h2>
+          <p class="section-sub">Zawodnicy oraz sztab szkoleniowy United Środa Śląska.</p>
+        </div>
+
+        <!-- Position Filter Pills -->
+        <div class="filter-pills" role="tablist" aria-label="Filtruj zawodników według pozycji">
+          <button
+            type="button"
+            class="filter-pill"
+            [class.active]="activeRosterFilter() === 'all'"
+            (click)="setRosterFilter('all')"
+          >
+            Wszyscy ({{ roster().length }})
+          </button>
+          <button
+            type="button"
+            class="filter-pill"
+            [class.active]="activeRosterFilter() === 'SETTER'"
+            (click)="setRosterFilter('SETTER')"
+          >
+            Rozgrywający
+          </button>
+          <button
+            type="button"
+            class="filter-pill"
+            [class.active]="activeRosterFilter() === 'OUTSIDE'"
+            (click)="setRosterFilter('OUTSIDE')"
+          >
+            Przyjmujący
+          </button>
+          <button
+            type="button"
+            class="filter-pill"
+            [class.active]="activeRosterFilter() === 'OPPOSITE'"
+            (click)="setRosterFilter('OPPOSITE')"
+          >
+            Atakujący
+          </button>
+          <button
+            type="button"
+            class="filter-pill"
+            [class.active]="activeRosterFilter() === 'MIDDLE'"
+            (click)="setRosterFilter('MIDDLE')"
+          >
+            Środkowi
+          </button>
+          <button
+            type="button"
+            class="filter-pill"
+            [class.active]="activeRosterFilter() === 'LIBERO'"
+            (click)="setRosterFilter('LIBERO')"
+          >
+            Libero
+          </button>
+          <button
+            type="button"
+            class="filter-pill"
+            [class.active]="activeRosterFilter() === 'COACH'"
+            (click)="setRosterFilter('COACH')"
+          >
+            Sztab
+          </button>
+        </div>
+      </div>
+
+      <div class="roster-grid">
+        @for (player of visibleRoster(); track player.id) {
+          <article class="player-card" [class.is-coach]="player.position === 'COACH'" [class.is-captain]="player.isCaptain">
+            <div class="player-watermark" aria-hidden="true">
+              {{ player.position === 'COACH' ? 'TR' : (player.number < 10 ? '0' + player.number : player.number) }}
+            </div>
+
+            <div class="player-card-header">
+              <span class="position-badge" [ngClass]="positionBadgeClass(player.position)">
+                {{ positionLabel(player.position) }}
+              </span>
+            </div>
+
+            <div class="player-visual" [class.has-photo]="hasPlayerPhoto(player.id)">
+              @if (hasPlayerPhoto(player.id)) {
+                <img
+                  [src]="playerPhotoUrl(player.id)"
+                  [alt]="player.firstName + ' ' + player.lastName"
+                  class="player-photo"
+                  loading="lazy"
+                  (error)="onPlayerPhotoError(player.id)"
+                />
+              } @else {
+                <div class="player-silhouette">
+                  <svg viewBox="0 0 200 240" fill="currentColor" class="player-svg" aria-hidden="true">
+                    <path d="M100,20 C125,20 142,36 142,62 C142,78 136,92 126,102 C118,110 110,114 100,114 C90,114 82,110 74,102 C64,92 58,78 58,62 C58,36 75,20 100,20 Z" />
+                    <path d="M76,118 L124,118 L128,130 C136,140 150,150 166,160 C180,170 190,184 194,204 L194,240 L6,240 L6,204 C10,184 20,170 34,160 C50,150 64,140 72,130 Z" />
+                  </svg>
+                </div>
+              }
+              <div class="player-visual-overlay" aria-hidden="true"></div>
+            </div>
+
+            <div class="player-info">
+              <span class="player-first-name">{{ player.firstName }}</span>
+              <div class="player-name-row">
+                <div class="player-name-left">
+                  <h3 class="player-last-name">{{ player.lastName }}</h3>
+                  @if (player.isCaptain) {
+                    <span class="captain-circle" title="Kapitan zespołu" aria-label="Kapitan">K</span>
+                  }
+                </div>
+                @if (player.position !== 'COACH') {
+                  <span class="player-card-number">#{{ player.number }}</span>
+                }
+              </div>
+            </div>
+
+            @if (player.position !== 'COACH') {
+              <div class="player-stats-grid">
+                <div class="player-stat-col">
+                  <span class="stat-col-label">WZROST</span>
+                  <span class="stat-col-value">{{ player.height ? player.height + ' cm' : '—' }}</span>
+                </div>
+
+                <div class="player-stat-divider"></div>
+
+                <div class="player-stat-col">
+                  <span class="stat-col-label">ZASIĘG</span>
+                  <span class="stat-col-value">{{ player.attackRange ? player.attackRange + ' cm' : '—' }}</span>
+                </div>
+
+                <div class="player-stat-divider"></div>
+
+                <div class="player-stat-col">
+                  <span class="stat-col-label">WIEK</span>
+                  <span class="stat-col-value">{{ player.age ? player.age + ' l.' : '—' }}</span>
+                </div>
+              </div>
+            }
+          </article>
+        } @empty {
+          <div class="roster-empty-state">
+            <p>{{ loading() ? 'Trwa ładowanie składu zespołu...' : 'Skład drużyny na ten sezon zostanie wkrótce opublikowany.' }}</p>
+          </div>
+        }
+      </div>
+    </div>
+  </section>
+
   <!-- ABOUT CLUB SECTION: Inspired by Screenshot 3 with 01/02/03 steps & green neon glow -->
   <section id="klub" class="section section-club">
     <div class="section-container">
       <div class="section-header-block centered">
-        <p class="section-eyebrow">FILOZOFIA I WARTOŚCI</p>
+        <p class="section-eyebrow">Kilka słów o nas</p>
         <h2 class="section-title">WIĘCEJ NIŻ <span class="highlight-green">KLUB</span></h2>
         <p class="section-sub max-w-2xl">
-          Budujemy silną siatkówkę w Środzie Śląskiej. Każdy mecz to wspólne święto zawodników, sztabu i kibiców.
+          Naszą misją jest rozwój siatkówki w Środzie Śląskiej i okolicy. Każdy mecz to wspólne święto zawodników, sztabu i kibiców.
         </p>
       </div>
 
@@ -809,15 +961,21 @@
         <div class="feature-card">
           <div class="feature-watermark">01</div>
           <div class="feature-icon-wrapper">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="feature-svg">
-              <circle cx="12" cy="12" r="10" />
-              <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
-              <path d="M2 12h20" />
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feature-svg" aria-hidden="true">
+              <path d="M4 21h8" />
+              <path d="M8 21V4" />
+              <path d="M8 4L4 8h16l-3-4H8z" />
+              <path d="M17 8v6" />
+              <path d="M15 14h4l-2 3-2-3z" />
+              <path d="M8 10l-3 3" />
+              <path d="M8 14l-3 3" />
+              <path d="M8 18l-3 3" />
             </svg>
           </div>
-          <h3 class="feature-title">Pasja i Walka</h3>
+          <h3 class="feature-title">Początki Klubu</h3>
           <p class="feature-desc">
-            Walczymy o każdą piłkę bez kompromisów. Każdy punkt to wynik determinacji, litrów potu na treningach i charakteru drużyny.
+            Nasza historia zaczęła się w 2025 roku, kiedy to poraz w pierwszy w historii przystąpiliśmy do dolnośląskich rozgrywek mężczyzn pod szyldem United Volley Wrocław.
+            <br>W debiutanckim sezonie walka o awans toczyła się do ostatniej kolejki. Ostatecznie uplasowaliśmy się na 5-tym miejscu, z minimalną stratą do miejsc premiowanych awansem do fazy play-off.
           </p>
         </div>
 
@@ -825,16 +983,21 @@
         <div class="feature-card">
           <div class="feature-watermark">02</div>
           <div class="feature-icon-wrapper">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="feature-svg">
-              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-              <circle cx="9" cy="7" r="4" />
-              <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-              <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feature-svg" aria-hidden="true">
+              <circle cx="12" cy="12" r="2" fill="currentColor" />
+              <path d="M12 4v3m0 10v3" />
+              <path d="M4 12h3m10 0h3" />
+              <path d="M6.34 6.34l2.12 2.12m7.08 7.08l2.12 2.12" />
+              <path d="M6.34 17.66l2.12-2.12m7.08-7.08l2.12-2.12" />
+              <circle cx="19" cy="5" r="1" fill="currentColor" />
+              <circle cx="5" cy="19" r="1" fill="currentColor" />
+              <circle cx="19" cy="19" r="1" fill="currentColor" />
+              <circle cx="5" cy="5" r="1" fill="currentColor" />
             </svg>
           </div>
-          <h3 class="feature-title">Drużyna i Zaufanie</h3>
+          <h3 class="feature-title">Nadchodzi Nowe</h3>
           <p class="feature-desc">
-            Siatkówka to gra zespołowa w najczystszej postaci. Asekuracja, komunikacja i wzajemne wsparcie dają nam przewagę w trudnych momentach.
+            Po sezonie Klub przeszedł restrukturyzacje i zdecydował się na przeprowadzkę. Nasze szeregi zostały zasilone przez nowych, ambitnych zawodników z dużym doświadczeniem. Od sezonu 2026/27 będziemy dumnie reprezentać miasto Środa Śląska.
           </p>
         </div>
 
@@ -842,18 +1005,19 @@
         <div class="feature-card">
           <div class="feature-watermark">03</div>
           <div class="feature-icon-wrapper">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="feature-svg">
-              <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" />
-              <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18" />
-              <path d="M4 22h16" />
-              <path d="M10 14.66V17c0 .55-.45 1-1 1H7" />
-              <path d="M14 14.66V17c0 .55.45 1 1 1h2" />
-              <path d="M18 2H6v7a6 6 0 0 0 12 0V2z" />
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feature-svg" aria-hidden="true">
+              <circle cx="12" cy="12" r="8" />
+              <line x1="22" y1="12" x2="17" y2="12" />
+              <line x1="7" y1="12" x2="2" y2="12" />
+              <line x1="12" y1="7" x2="12" y2="2" />
+              <line x1="12" y1="22" x2="12" y2="17" />
+              <circle cx="12" cy="12" r="2" fill="currentColor" />
             </svg>
           </div>
-          <h3 class="feature-title">Społeczność Kibiców</h3>
+          <h3 class="feature-title">Cele na 2026/27</h3>
           <p class="feature-desc">
-            Trybuny w Środzie Śląskiej to nasz siódmy zawodnik. Tworzymy niezapomniane sportowe emocje dla mieszkańców całego regionu.
+            Dzięki dużym wzmocnieniom zarówno na płaszczyźnie infrastruktury jak i zawodniczej możemy mierzyć jeszcze wyżej. Jako cel na obecny sezon postawiliśmy sobie zwycięstwo w II Lidze Dolnośląskiej i awans na wyższy szczebel rozgrywkowy.
+            <br>Gorąco zapraszamy do kibicowania i do zobaczenia na hali w Środzie!
           </p>
         </div>
       </div>
@@ -922,14 +1086,15 @@
       <div class="footer-links">
         <div class="link-col">
           <strong>Nawigacja</strong>
-          <a href="#start">Start</a>
+          <a href="#start">Strona Główna</a>
           <a href="#wyniki">Wyniki</a>
           <a href="#mecze">Terminarz</a>
           <a href="#tabela">Tabela</a>
+          <a href="#sklad">Skład</a>
         </div>
         <div class="link-col">
           <strong>Klub</strong>
-          <a href="#klub">O Drużynie</a>
+          <a href="#klub">O nas</a>
           <a href="#kontakt">Kontakt</a>
         </div>
       </div>

@@ -2,7 +2,7 @@ import { DatePipe, DecimalPipe, NgClass, registerLocaleData } from '@angular/com
 import localePl from '@angular/common/locales/pl';
 import { Component, computed, inject, LOCALE_ID, signal } from '@angular/core';
 import { LeagueApiService, UNITED_TEAM_NAME } from './core/api/league-api.service';
-import { MatchItem, SetDetailItem, TeamStanding, TeamStatItem } from './core/api/league.models';
+import { MatchItem, PlayerItem, PlayerPosition, SetDetailItem, TeamStanding, TeamStatItem } from './core/api/league.models';
 
 registerLocaleData(localePl, 'pl');
 registerLocaleData(localePl, 'pl-PL');
@@ -36,8 +36,72 @@ export class App {
   protected readonly results = this.leagueApi.results;
   protected readonly allResults = this.leagueApi.allResults;
   protected readonly standings = this.leagueApi.standings;
+  protected readonly roster = this.leagueApi.roster;
   protected readonly loading = this.leagueApi.loading;
   protected readonly error = this.leagueApi.error;
+
+  protected readonly activeRosterFilter = signal<string>('all');
+
+  protected readonly visibleRoster = computed(() => {
+    const filter = this.activeRosterFilter();
+    const all = this.roster();
+    const filtered = filter === 'all' ? all : all.filter((p) => p.position === filter);
+    return [...filtered].sort((a, b) => {
+      const aIsCoach = a.position === 'COACH';
+      const bIsCoach = b.position === 'COACH';
+      if (aIsCoach && !bIsCoach) return 1;
+      if (!aIsCoach && bIsCoach) return -1;
+      return (a.number ?? 0) - (b.number ?? 0);
+    });
+  });
+
+  protected setRosterFilter(filter: string): void {
+    this.activeRosterFilter.set(filter);
+  }
+
+  protected positionLabel(position: PlayerPosition | string): string {
+    switch (position) {
+      case 'SETTER': return 'Rozgrywający';
+      case 'OUTSIDE': return 'Przyjmujący';
+      case 'OPPOSITE': return 'Atakujący';
+      case 'MIDDLE': return 'Środkowy';
+      case 'LIBERO': return 'Libero';
+      case 'COACH': return 'Trener';
+      default: return position;
+    }
+  }
+
+  protected positionBadgeClass(position: PlayerPosition | string): string {
+    switch (position) {
+      case 'SETTER': return 'badge-setter';
+      case 'OUTSIDE': return 'badge-outside';
+      case 'OPPOSITE': return 'badge-opposite';
+      case 'MIDDLE': return 'badge-middle';
+      case 'LIBERO': return 'badge-libero';
+      case 'COACH': return 'badge-coach';
+      default: return '';
+    }
+  }
+
+  protected readonly failedPlayerPhotos = signal<Set<string>>(new Set());
+
+  protected playerPhotoUrl(playerId: string): string {
+    if (!playerId) return '';
+    const base = ASSETS_CDN_URL ? ASSETS_CDN_URL.replace(/\/$/, '') : '';
+    return `${base}/roster/${encodeURIComponent(playerId)}.png`;
+  }
+
+  protected hasPlayerPhoto(playerId: string): boolean {
+    return !this.failedPlayerPhotos().has(playerId);
+  }
+
+  protected onPlayerPhotoError(playerId: string): void {
+    this.failedPlayerPhotos.update((set) => {
+      const next = new Set(set);
+      next.add(playerId);
+      return next;
+    });
+  }
 
   protected readonly nextMatch = computed(() => this.fixtures()[0]);
 

@@ -48,3 +48,6 @@ bin/
 .terraform/
 *.tfstate
 *.tfstate.*
+
+### Local Seed Data ###
+roster_seed.json

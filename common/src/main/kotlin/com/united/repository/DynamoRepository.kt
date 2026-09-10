@@ -8,6 +8,8 @@ import aws.sdk.kotlin.services.dynamodb.model.PutRequest
 import aws.sdk.kotlin.services.dynamodb.model.WriteRequest
 import aws.sdk.kotlin.services.dynamodb.model.QueryRequest
 import com.united.model.MatchItem
+import com.united.model.PlayerItem
+import com.united.model.PlayerPosition
 import com.united.model.ScoreParser
 import com.united.model.TeamStanding
 import kotlinx.coroutines.delay
@@ -179,6 +181,72 @@ class DynamoRepository(
                     sets = sets
                 )
             }
+        }
+    }
+
+    /**
+     * Saves or overwrites roster members in DynamoDB table 'LeagueData'.
+     */
+    suspend fun saveRoster(roster: List<PlayerItem>) {
+        val writeRequests = roster.map { player ->
+            val item = mutableMapOf(
+                "PK" to AttributeValue.S("ROSTER"),
+                "SK" to AttributeValue.S("PLAYER#${player.id}"),
+                "id" to AttributeValue.S(player.id),
+                "firstName" to AttributeValue.S(player.firstName),
+                "lastName" to AttributeValue.S(player.lastName),
+                "position" to AttributeValue.S(player.position.name),
+                "number" to AttributeValue.N(player.number.toString()),
+                "isCaptain" to AttributeValue.Bool(player.isCaptain)
+            )
+            player.height?.let { item["height"] = AttributeValue.N(it.toString()) }
+            player.attackRange?.let { item["attackRange"] = AttributeValue.N(it.toString()) }
+            player.age?.let { item["age"] = AttributeValue.N(it.toString()) }
+
+            WriteRequest { putRequest = PutRequest { this.item = item } }
+        }
+
+        executeBatchWrite(writeRequests)
+    }
+
+    /**
+     * Fetches all roster members from DynamoDB, sorted by position order and jersey number.
+     */
+    suspend fun getRoster(): List<PlayerItem> {
+        DynamoDbClient.fromEnvironment().use { ddb ->
+            val request = QueryRequest {
+                tableName = this@DynamoRepository.tableName
+                keyConditionExpression = "PK = :pk"
+                expressionAttributeValues = mapOf(
+                    ":pk" to AttributeValue.S("ROSTER")
+                )
+            }
+
+            val response = ddb.query(request)
+            val items = response.items ?: emptyList()
+
+            return items.map { item ->
+                val posStr = (item["position"] as? AttributeValue.S)?.value
+                val position = PlayerPosition.fromString(posStr)
+
+                PlayerItem(
+                    id = (item["id"] as? AttributeValue.S)?.value
+                        ?: (item["SK"] as? AttributeValue.S)?.value?.removePrefix("PLAYER#")
+                        ?: "",
+                    firstName = (item["firstName"] as? AttributeValue.S)?.value ?: "",
+                    lastName = (item["lastName"] as? AttributeValue.S)?.value ?: "",
+                    position = position,
+                    number = item["number"]?.asN()?.toIntOrNull() ?: 0,
+                    height = item["height"]?.asN()?.toIntOrNull(),
+                    attackRange = item["attackRange"]?.asN()?.toIntOrNull(),
+                    age = item["age"]?.asN()?.toIntOrNull(),
+                    isCaptain = (item["isCaptain"] as? AttributeValue.Bool)?.value ?: false
+                )
+            }.sortedWith(
+                compareBy<PlayerItem> { it.position.sortOrder }
+                    .thenBy { if (it.number == 0) 999 else it.number }
+                    .thenBy { it.lastName }
+            )
         }
     }
 }

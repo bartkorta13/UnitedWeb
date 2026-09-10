@@ -48,3 +48,17 @@ export interface SetDetailItem {
   hostPercent: number;
   awayPercent: number;
 }
+
+export type PlayerPosition = 'SETTER' | 'OUTSIDE' | 'OPPOSITE' | 'MIDDLE' | 'LIBERO' | 'COACH';
+
+export interface PlayerItem {
+  id: string;
+  firstName: string;
+  lastName: string;
+  position: PlayerPosition;
+  number: number;
+  height?: number;
+  attackRange?: number;
+  age?: number;
+  isCaptain?: boolean;
+}

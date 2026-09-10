@@ -32,11 +32,26 @@ kotlin {
 }
 
 tasks.test {
-    useJUnitPlatform()
+    useJUnitPlatform {
+        excludeTags("manual")
+    }
 }
 
 tasks.named<com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar>("shadowJar") {
     archiveBaseName.set("core-service")
     archiveClassifier.set("all")
     archiveVersion.set("") // Removes the version number from the filename
+}
+
+tasks.register<Test>("seedRoster") {
+    group = "verification"
+    description = "Runs SeedRosterTest to seed DynamoDB from test resources"
+    testClassesDirs = sourceSets["test"].output.classesDirs
+    classpath = sourceSets["test"].runtimeClasspath
+    useJUnitPlatform {
+        includeTags("manual")
+    }
+    filter {
+        includeTestsMatching("com.united.seed.SeedRosterTest")
+    }
 }

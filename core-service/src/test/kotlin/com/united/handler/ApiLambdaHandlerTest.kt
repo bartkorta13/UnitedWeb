@@ -142,4 +142,36 @@ class ApiLambdaHandlerTest {
         assert(response.body.contains("25:21"))
         assert(response.body.contains("Hala Główna"))
     }
+
+    @Test
+    fun `should return roster on GET roster path`() {
+        // Given
+        val fakeRoster = listOf(
+            com.united.model.PlayerItem(
+                id = "jan-kowalski",
+                firstName = "Jan",
+                lastName = "Kowalski",
+                position = com.united.model.PlayerPosition.SETTER,
+                number = 7,
+                height = 192,
+                attackRange = 330,
+                age = 24,
+                isCaptain = true
+            )
+        )
+        coEvery { mockRepository.getRoster() } returns fakeRoster
+
+        val request = ApiRequest().apply {
+            rawPath = "/roster"
+        }
+
+        // When
+        val response = handler.handleRequest(request, null)
+
+        // Then
+        assertEquals(200, response.statusCode)
+        assert(response.body.contains("Kowalski"))
+        assert(response.body.contains("SETTER"))
+        assert(response.body.contains("192"))
+    }
 }
