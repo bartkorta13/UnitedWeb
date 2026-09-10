@@ -1,6 +1,7 @@
 plugins {
     kotlin("jvm")
     id("com.gradleup.shadow") version "9.6.1"
+    application
 }
 
 group = "com.united"
@@ -29,6 +30,10 @@ dependencies {
 
 kotlin {
     jvmToolchain(21)
+}
+
+application {
+    mainClass.set("com.united.LocalServerKt")
 }
 
 tasks.test {

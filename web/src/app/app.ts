@@ -7,9 +7,11 @@ import { MatchItem, PlayerItem, PlayerPosition, SetDetailItem, TeamStanding, Tea
 registerLocaleData(localePl, 'pl');
 registerLocaleData(localePl, 'pl-PL');
 
-// Set this to your CloudFront CDN URL from terraform output (e.g. 'https://d111111abcdef8.cloudfront.net')
+import { environment } from '../environments/environment';
+
+// CloudFront CDN URL from environment configuration.
 // Leaving it empty ('') automatically serves logos from local `web/public/logos/`.
-export const ASSETS_CDN_URL: string = 'https://d1rm5h55nlqrob.cloudfront.net';
+export const ASSETS_CDN_URL: string = environment.cdnUrl;
 
 @Component({
   selector: 'app-root',

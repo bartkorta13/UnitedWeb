@@ -2,11 +2,10 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, inject, signal } from '@angular/core';
 import { forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
+import { environment } from '../../../environments/environment';
 import { MatchItem, PlayerItem, TeamStanding } from './league.models';
 
-// Terraform output: infrastructure/api_url.
-const API_URL = 'https://601tz51c7e.execute-api.eu-central-1.amazonaws.com';
-export const UNITED_TEAM_NAME = 'United_Środa_Śląska';
+export const UNITED_TEAM_NAME = environment.unitedTeamName;
 
 @Injectable({ providedIn: 'root' })
 export class LeagueApiService {
@@ -28,34 +27,35 @@ export class LeagueApiService {
     this.loading.set(true);
     this.error.set(false);
 
+    const apiUrl = environment.apiUrl.replace(/\/+$/, '');
     const encodedTeam = encodeURIComponent(UNITED_TEAM_NAME);
 
     forkJoin({
-      fixtures: this.http.get<MatchItem[]>(`${API_URL}/fixtures/${encodedTeam}`).pipe(
+      fixtures: this.http.get<MatchItem[]>(`${apiUrl}/fixtures/${encodedTeam}`).pipe(
         catchError((err) => {
           console.error('Error fetching fixtures:', err);
           return of<MatchItem[]>([]);
         })
       ),
-      results: this.http.get<MatchItem[]>(`${API_URL}/results/${encodedTeam}`).pipe(
+      results: this.http.get<MatchItem[]>(`${apiUrl}/results/${encodedTeam}`).pipe(
         catchError((err) => {
           console.error('Error fetching results:', err);
           return of<MatchItem[]>([]);
         })
       ),
-      allResults: this.http.get<MatchItem[]>(`${API_URL}/results`).pipe(
+      allResults: this.http.get<MatchItem[]>(`${apiUrl}/results`).pipe(
         catchError((err) => {
           console.error('Error fetching all results:', err);
           return of<MatchItem[]>([]);
         })
       ),
-      standings: this.http.get<TeamStanding[]>(`${API_URL}/standings`).pipe(
+      standings: this.http.get<TeamStanding[]>(`${apiUrl}/standings`).pipe(
         catchError((err) => {
           console.error('Error fetching standings:', err);
           return of<TeamStanding[]>([]);
         })
       ),
-      roster: this.http.get<PlayerItem[]>(`${API_URL}/roster`).pipe(
+      roster: this.http.get<PlayerItem[]>(`${apiUrl}/roster`).pipe(
         catchError((err) => {
           console.error('Error fetching roster:', err);
           return of<PlayerItem[]>([]);
