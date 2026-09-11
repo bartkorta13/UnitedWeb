@@ -13,6 +13,20 @@ registerLocaleData(localePl, 'pl-PL');
 
 export const ASSETS_CDN_URL: string = environment.cdnUrl;
 
+export interface ClubHistoryCard {
+  id: string;
+  year: string;
+  watermark: string;
+  badge: string;
+  badgeClass: string;
+  title: string;
+  desc1: string;
+  desc2: string;
+  milestone: string;
+  milestoneClass: string;
+  shortLabel: string;
+}
+
 @Component({
   selector: 'app-home-view',
   standalone: true,
@@ -48,6 +62,89 @@ export class HomeView implements OnInit {
   protected readonly latestNews = this.newsApi.latestNews;
   protected readonly loadingNews = this.newsApi.loadingLatest;
   protected readonly errorNews = this.newsApi.errorLatest;
+
+  // Club History Card Selector (25' | 26' | 27')
+  protected readonly activeClubStep = signal<number>(1); // Default to 2026' (center)
+
+  protected readonly clubCards: readonly ClubHistoryCard[] = [
+    {
+      id: 'step-25',
+      year: '2025',
+      watermark: "25'",
+      badge: '2025',
+      badgeClass: 'badge-past',
+      title: 'Początki Klubu',
+      desc1: 'Nasza historia zaczęła się w 2025 roku, kiedy to po raz pierwszy w historii przystąpiliśmy do dolnośląskich rozgrywek mężczyzn pod szyldem United Volley Wrocław.',
+      desc2: 'W debiutanckim sezonie walka o awans toczyła się do ostatniej kolejki. Ostatecznie uplasowaliśmy się na 5-tym miejscu, z minimalną stratą do miejsc premiowanych awansem do fazy play-off.',
+      milestone: 'Debiut w lidze • 5. miejsce',
+      milestoneClass: 'milestone-past',
+      shortLabel: 'Początki',
+    },
+    {
+      id: 'step-26',
+      year: '2026',
+      watermark: "26'",
+      badge: '2026 • TERAZ',
+      badgeClass: 'badge-current',
+      title: 'Nadchodzi Nowe',
+      desc1: 'Po sezonie Klub przeszedł restrukturyzację i zdecydował się na przeprowadzkę. Nasze szeregi zostały zasilone przez nowych, ambitnych zawodników z dużym doświadczeniem.',
+      desc2: 'Od sezonu 2026/27 dumnie reprezentujemy miasto Środa Śląska, budując nową tożsamość, silny zespół i lokalną społeczność kibiców.',
+      milestone: 'Nowy dom: Środa Śląska',
+      milestoneClass: 'milestone-current',
+      shortLabel: 'Teraz',
+    },
+    {
+      id: 'step-27',
+      year: '2027',
+      watermark: "27'",
+      badge: '2027 • CEL',
+      badgeClass: 'badge-future',
+      title: 'Cele na 2026/27',
+      desc1: 'Dzięki dużym wzmocnieniom zarówno na płaszczyźnie infrastruktury, jak i zawodniczej możemy mierzyć jeszcze wyżej.',
+      desc2: 'Jako cel na obecny sezon postawiliśmy sobie zwycięstwo w II Lidze Dolnośląskiej i awans na wyższy szczebel rozgrywkowy. Gorąco zapraszamy do kibicowania i do zobaczenia na hali w Środzie!',
+      milestone: 'Mistrzostwo II Ligi • Awans',
+      milestoneClass: 'milestone-future',
+      shortLabel: 'Cel',
+    },
+  ];
+
+  protected setClubStep(step: number): void {
+    this.activeClubStep.set(step);
+  }
+
+  protected prevClubStep(): void {
+    this.activeClubStep.update(curr => (curr > 0 ? curr - 1 : 2));
+  }
+
+  protected nextClubStep(): void {
+    this.activeClubStep.update(curr => (curr < 2 ? curr + 1 : 0));
+  }
+
+  protected getClubCardPosition(index: number): 'pos-center' | 'pos-left' | 'pos-right' {
+    const current = this.activeClubStep();
+    const rel = (index - current + 3) % 3;
+    if (rel === 0) return 'pos-center';
+    if (rel === 1) return 'pos-right';
+    return 'pos-left';
+  }
+
+  private clubTouchStartX = 0;
+
+  protected onClubTouchStart(event: TouchEvent): void {
+    this.clubTouchStartX = event.changedTouches[0]?.screenX ?? 0;
+  }
+
+  protected onClubTouchEnd(event: TouchEvent): void {
+    const touchEndX = event.changedTouches[0]?.screenX ?? 0;
+    const diff = this.clubTouchStartX - touchEndX;
+    if (Math.abs(diff) > 45) {
+      if (diff > 0) {
+        this.nextClubStep();
+      } else {
+        this.prevClubStep();
+      }
+    }
+  }
 
   ngOnInit(): void {
     this.newsApi.fetchLatestNews(3);

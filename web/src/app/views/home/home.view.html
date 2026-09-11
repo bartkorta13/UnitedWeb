@@ -948,99 +948,85 @@
         </p>
       </div>
 
-      <div class="club-timeline-flow">
-        <!-- Step 1: 25' (Początki Klubu) -->
-        <article class="timeline-card step-25">
-          <div class="timeline-year-watermark" aria-hidden="true">25'</div>
-          <div class="timeline-card-inner">
-            <div class="timeline-card-header">
-              <span class="timeline-badge badge-past">2025</span>
-              <h3 class="timeline-title">Początki Klubu</h3>
-            </div>
-            <div class="timeline-card-body">
-              <p class="timeline-desc">
-                Nasza historia zaczęła się w 2025 roku, kiedy to po raz pierwszy w historii przystąpiliśmy do dolnośląskich rozgrywek mężczyzn pod szyldem United Volley Wrocław.
-              </p>
-              <p class="timeline-desc-extra">
-                W debiutanckim sezonie walka o awans toczyła się do ostatniej kolejki. Ostatecznie uplasowaliśmy się na 5-tym miejscu, z minimalną stratą do miejsc premiowanych awansem do fazy play-off.
-              </p>
-            </div>
-            <div class="timeline-card-footer">
-              <span class="timeline-milestone">
-                <span class="milestone-dot"></span>
-                <span>Debiut w lidze &bull; 5. miejsce</span>
-              </span>
-            </div>
-          </div>
-        </article>
-
-        <!-- Arrow 1 -> 2 -->
-        <div class="timeline-arrow-separator" aria-hidden="true">
-          <div class="arrow-circle">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="arrow-icon">
-              <path d="M5 12h14M13 5l7 7-7 7" />
-            </svg>
-          </div>
+      <div
+        class="club-card-selector"
+        (touchstart)="onClubTouchStart($event)"
+        (touchend)="onClubTouchEnd($event)"
+      >
+        <div class="selector-stage">
+          @for (card of clubCards; track card.id; let idx = $index) {
+            <article
+              class="club-select-card"
+              [ngClass]="[card.id, getClubCardPosition(idx)]"
+              (click)="setClubStep(idx)"
+              (keydown.enter)="setClubStep(idx)"
+              (keydown.space)="setClubStep(idx); $event.preventDefault()"
+              [attr.aria-selected]="activeClubStep() === idx"
+              role="button"
+              tabindex="0"
+            >
+              <div class="timeline-year-watermark" aria-hidden="true">{{ card.watermark }}</div>
+              <div class="timeline-card-inner">
+                <div class="timeline-card-header">
+                  <span class="timeline-badge" [ngClass]="card.badgeClass">{{ card.badge }}</span>
+                  <h3 class="timeline-title">{{ card.title }}</h3>
+                </div>
+                <div class="timeline-card-body">
+                  <p class="timeline-desc">{{ card.desc1 }}</p>
+                  <p class="timeline-desc-extra">{{ card.desc2 }}</p>
+                </div>
+                <div class="timeline-card-footer">
+                  <span class="timeline-milestone" [ngClass]="card.milestoneClass">
+                    <span class="milestone-dot"></span>
+                    <span>{{ card.milestone }}</span>
+                  </span>
+                </div>
+              </div>
+            </article>
+          }
         </div>
 
-        <!-- Step 2: 26' (Nadchodzi Nowe) -->
-        <article class="timeline-card step-26">
-          <div class="timeline-year-watermark" aria-hidden="true">26'</div>
-          <div class="timeline-card-inner">
-            <div class="timeline-card-header">
-              <span class="timeline-badge badge-current">2026 &bull; TERAZ</span>
-              <h3 class="timeline-title">Nadchodzi Nowe</h3>
-            </div>
-            <div class="timeline-card-body">
-              <p class="timeline-desc">
-                Po sezonie Klub przeszedł restrukturyzację i zdecydował się na przeprowadzkę. Nasze szeregi zostały zasilone przez nowych, ambitnych zawodników z dużym doświadczeniem.
-              </p>
-              <p class="timeline-desc-extra">
-                Od sezonu 2026/27 dumnie reprezentujemy miasto Środa Śląska, budując nową tożsamość, silny zespół i lokalną społeczność kibiców.
-              </p>
-            </div>
-            <div class="timeline-card-footer">
-              <span class="timeline-milestone">
-                <span class="milestone-dot"></span>
-                <span>Nowy dom: Środa Śląska</span>
-              </span>
-            </div>
-          </div>
-        </article>
-
-        <!-- Arrow 2 -> 3 -->
-        <div class="timeline-arrow-separator" aria-hidden="true">
-          <div class="arrow-circle">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="arrow-icon">
-              <path d="M5 12h14M13 5l7 7-7 7" />
+        <!-- Interactive selector controls (prev, pill indicators, next) -->
+        <div class="selector-controls">
+          <button
+            class="selector-nav-btn prev"
+            type="button"
+            (click)="prevClubStep()"
+            aria-label="Poprzednia karta historii"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="nav-svg">
+              <path d="M19 12H5M12 19l-7-7 7-7" />
             </svg>
-          </div>
-        </div>
+          </button>
 
-        <!-- Step 3: 27' (Cele na 2026/27) -->
-        <article class="timeline-card step-27">
-          <div class="timeline-year-watermark" aria-hidden="true">27'</div>
-          <div class="timeline-card-inner">
-            <div class="timeline-card-header">
-              <span class="timeline-badge badge-future">2027 &bull; CEL</span>
-              <h3 class="timeline-title">Cele na 2026/27</h3>
-            </div>
-            <div class="timeline-card-body">
-              <p class="timeline-desc">
-                Dzięki dużym wzmocnieniom zarówno na płaszczyźnie infrastruktury, jak i zawodniczej możemy mierzyć jeszcze wyżej.
-              </p>
-              <p class="timeline-desc-extra">
-                Jako cel na obecny sezon postawiliśmy sobie zwycięstwo w II Lidze Dolnośląskiej i awans na wyższy szczebel rozgrywkowy. Gorąco zapraszamy do kibicowania i do zobaczenia na hali w Środzie!
-              </p>
-            </div>
-            <div class="timeline-card-footer">
-              <span class="timeline-milestone">
-                <span class="milestone-dot"></span>
-                <span>Mistrzostwo II Ligi &bull; Awans</span>
-              </span>
-            </div>
+          <div class="selector-pills-nav" role="tablist" aria-label="Wybór etapu historii klubu">
+            @for (card of clubCards; track card.id; let idx = $index) {
+              <button
+                class="selector-pill"
+                [class.active]="activeClubStep() === idx"
+                (click)="setClubStep(idx)"
+                type="button"
+                role="tab"
+                [attr.aria-selected]="activeClubStep() === idx"
+                [attr.aria-label]="card.title"
+              >
+                <span class="pill-year">{{ card.watermark }}</span>
+                <span class="pill-title">{{ card.shortLabel }}</span>
+              </button>
+            }
           </div>
-        </article>
+
+          <button
+            class="selector-nav-btn next"
+            type="button"
+            (click)="nextClubStep()"
+            aria-label="Następna karta historii"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="nav-svg">
+              <path d="M5 12h14M12 5l7 7-7 7" />
+            </svg>
+          </button>
+        </div>
       </div>
     </div>
   </section>
