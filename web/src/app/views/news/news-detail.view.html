@@ -35,8 +35,6 @@
             <time class="meta-date" [attr.datetime]="article()!.createdAt">
               {{ article()!.createdAt | date: 'd MMMM yyyy' : '' : 'pl' }}
             </time>
-            <span class="meta-separator">•</span>
-            <span class="meta-category">KS UNITED ŚRODA ŚLĄSKA</span>
           </div>
 
           <h1 class="article-title">{{ article()!.title }}</h1>
@@ -90,16 +88,6 @@
             </div>
           </section>
         }
-
-        <!-- Bottom Navigation CTA -->
-        <div class="article-footer-nav">
-          <a routerLink="/aktualnosci" class="btn btn-outline">
-            ← Wszystkie aktualności
-          </a>
-          <a routerLink="/" class="btn btn-primary">
-            Strona Główna
-          </a>
-        </div>
       </article>
     }
   </div>
