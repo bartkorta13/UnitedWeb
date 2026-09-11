@@ -63,10 +63,9 @@
           <section class="gallery-section">
             <div class="gallery-header">
               <div class="gallery-titles">
-                <p class="section-eyebrow">ZDJĘCIA Z MECZU / WYDARZENIA</p>
                 <h2 class="gallery-title">GALERIA <span class="highlight-green">ZDJĘĆ</span></h2>
               </div>
-              <span class="gallery-badge">{{ article()!.galleryPhotos.length }} zdjęć</span>
+              <span class="gallery-badge">{{ getPhotosCountLabel(article()!.galleryPhotos.length) }}</span>
             </div>
 
             <div class="gallery-grid">

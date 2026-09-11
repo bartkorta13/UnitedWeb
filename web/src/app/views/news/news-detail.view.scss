@@ -2,7 +2,7 @@
   min-height: calc(100vh - 80px);
   background-color: var(--color-bg, #030604);
   color: var(--color-text, #ffffff);
-  padding: clamp(2rem, 4vw, 4rem) 1.5rem 5rem;
+  padding: clamp(2rem, 4vw, 3rem) 1.5rem 2rem;
 }
 
 .page-container {
@@ -110,7 +110,7 @@
 
 .article-body {
   max-width: 860px;
-  margin: 0 auto 4rem;
+  margin: 0 auto 2.5rem;
 }
 
 /* ==========================================================================
@@ -226,7 +226,7 @@
    ========================================================================== */
 .gallery-section {
   max-width: 860px;
-  margin: 0 auto 4rem;
+  margin: 0 auto 1.5rem;
   padding-top: 2.5rem;
   border-top: 1px solid rgba(22, 78, 32, 0.4);
 }

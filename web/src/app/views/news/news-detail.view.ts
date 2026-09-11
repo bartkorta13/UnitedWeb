@@ -23,6 +23,16 @@ export class NewsDetailView implements OnInit {
   readonly lightboxOpen = signal(false);
   readonly activePhotoIndex = signal(0);
 
+  getPhotosCountLabel(count: number): string {
+    if (count === 1) return '1 zdjęcie';
+    const mod10 = count % 10;
+    const mod100 = count % 100;
+    if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) {
+      return `${count} zdjęcia`;
+    }
+    return `${count} zdjęć`;
+  }
+
   ngOnInit(): void {
     window.scrollTo({ top: 0, behavior: 'instant' });
 
