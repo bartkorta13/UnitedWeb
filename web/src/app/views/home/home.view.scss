@@ -2473,7 +2473,6 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2.2rem;
   width: 100%;
 }
 
@@ -2719,101 +2718,6 @@
   50% { transform: scale(1.4); opacity: 0.7; }
 }
 
-/* Interactive Navigation Controls below cards (arrows & pill tabs) */
-.selector-controls {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 1.25rem;
-  z-index: 12;
-}
-
-.selector-nav-btn {
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  background: rgba(10, 22, 13, 0.92);
-  border: 1.5px solid rgba(0, 230, 91, 0.45);
-  color: var(--color-accent-neon);
-  display: grid;
-  place-items: center;
-  cursor: pointer;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.55), 0 0 12px rgba(0, 230, 91, 0.15);
-  transition: all 0.25s ease;
-
-  .nav-svg {
-    width: 20px;
-    height: 20px;
-    transition: transform 0.2s ease;
-  }
-
-  &:hover {
-    transform: scale(1.1);
-    border-color: var(--color-accent-neon);
-    background: rgba(14, 30, 18, 0.98);
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.7), 0 0 20px rgba(0, 230, 91, 0.35);
-
-    &.prev .nav-svg {
-      transform: translateX(-2px);
-    }
-    &.next .nav-svg {
-      transform: translateX(2px);
-    }
-  }
-
-  &:active {
-    transform: scale(0.96);
-  }
-}
-
-.selector-pills-nav {
-  display: flex;
-  align-items: center;
-  gap: 0.65rem;
-  background: rgba(8, 15, 10, 0.85);
-  padding: 0.35rem 0.45rem;
-  border-radius: var(--radius-pill);
-  border: 1px solid rgba(22, 78, 32, 0.6);
-  backdrop-filter: blur(8px);
-}
-
-.selector-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.45rem;
-  padding: 0.4rem 0.9rem;
-  border-radius: var(--radius-pill);
-  font-family: var(--font-display);
-  font-size: 0.82rem;
-  font-weight: 700;
-  color: var(--color-text-muted);
-  cursor: pointer;
-  border: 1px solid transparent;
-  transition: all 0.25s ease;
-
-  .pill-year {
-    color: var(--color-accent-neon);
-    font-weight: 800;
-    font-size: 0.88rem;
-  }
-
-  .pill-title {
-    color: inherit;
-  }
-
-  &:hover {
-    color: #ffffff;
-    background: rgba(22, 78, 32, 0.3);
-  }
-
-  &.active {
-    background: rgba(0, 230, 91, 0.18);
-    border-color: var(--color-accent-neon);
-    color: #ffffff;
-    box-shadow: 0 0 14px rgba(0, 230, 91, 0.25);
-  }
-}
-
 /* Responsive adjustments */
 @media (max-width: 768px) {
   .selector-stage {
@@ -2833,24 +2737,6 @@
     &.pos-right {
       transform: translateX(calc(-50% + 84%)) scale(0.82) rotateY(-4deg);
       opacity: 0.4;
-    }
-  }
-
-  .selector-controls {
-    gap: 0.75rem;
-  }
-
-  .selector-pills-nav {
-    gap: 0.35rem;
-
-    .selector-pill {
-      padding: 0.32rem 0.65rem;
-      font-size: 0.76rem;
-      gap: 0.3rem;
-
-      .pill-year {
-        font-size: 0.8rem;
-      }
     }
   }
 }
