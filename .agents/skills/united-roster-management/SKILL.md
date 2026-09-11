@@ -38,8 +38,8 @@ This executes `SeedRosterTest` which reads `roster.json` and puts items into the
 - CloudFront domain: `https://d1rm5h55nlqrob.cloudfront.net`
 - Photo path convention: `roster/<id>.png` (e.g. `roster/bartosz-korta.png`)
 
-Upload a photo using AWS CLI:
+Upload a photo using AWS CLI (into /assets/roster/ folder):
 ```bash
-aws s3 cp my-photo.png s3://<ASSETS_BUCKET_NAME>/roster/<id>.png --content-type image/png
+aws s3 cp my-photo.png s3://<STORAGE_BUCKET_NAME>/assets/roster/<id>.png --content-type image/png
 ```
 If a photo is missing or fails to load, the frontend automatically falls back to an athletic silhouette avatar with player number in background watermark.

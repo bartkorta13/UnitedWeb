@@ -3,32 +3,63 @@ package com.united.handler
 import com.amazonaws.services.lambda.runtime.Context
 import com.amazonaws.services.lambda.runtime.RequestHandler
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.united.model.CreateNewsRequest
+import com.united.model.GenerateUploadUrlRequest
+import com.united.model.GenerateUploadUrlResponse
 import com.united.model.MatchItem
+import com.united.model.NewsItem
+import com.united.model.NewsSummary
+import com.united.model.SlugGenerator
 import com.united.model.TeamStanding
+import com.united.model.UpdateNewsRequest
 import com.united.repository.DynamoRepository
+import com.united.storage.S3MediaStorageService
 import kotlinx.coroutines.runBlocking
 import java.net.URLDecoder
 import java.nio.charset.StandardCharsets
 
-// API Gateway request mapping structures
+// API Gateway request mapping structures (supports API Gateway HTTP API v2 & v1)
+class RequestContext {
+    var http: HttpInfo? = null
+}
+
+class HttpInfo {
+    var method: String? = null
+    var path: String? = null
+}
+
 class ApiRequest {
     var rawPath: String? = null
-    var path: String? = null // Added to support older API Gateway payload formats
+    var path: String? = null
+    var httpMethod: String? = null
+    var requestContext: RequestContext? = null
     var pathParameters: Map<String, String>? = null
     var queryStringParameters: Map<String, String>? = null
+    var headers: Map<String, String>? = null
+    var body: String? = null
+    var isBase64Encoded: Boolean = false
+
+    fun getEffectiveMethod(): String {
+        return requestContext?.http?.method
+            ?: httpMethod
+            ?: "GET"
+    }
 }
 
 class ApiResponse(
     var statusCode: Int = 200,
     var headers: Map<String, String> = mapOf(
         "Content-Type" to "application/json",
-        "Access-Control-Allow-Origin" to "*"
+        "Access-Control-Allow-Origin" to "*",
+        "Access-Control-Allow-Methods" to "GET, POST, PUT, DELETE, OPTIONS",
+        "Access-Control-Allow-Headers" to "Content-Type, Authorization"
     ),
     var body: String = ""
 )
 
 class ApiLambdaHandler(
-    private val dynamoRepository: DynamoRepository = DynamoRepository()
+    private val dynamoRepository: DynamoRepository = DynamoRepository(),
+    private val s3StorageService: S3MediaStorageService = S3MediaStorageService()
 ) : RequestHandler<ApiRequest, ApiResponse> {
 
     private val objectMapper = jacksonObjectMapper()
@@ -48,6 +79,8 @@ class ApiLambdaHandler(
                 actualPath.startsWith("/fixtures/") -> actualPath.removePrefix("/fixtures/")
                 else -> null
             }
+
+        val method = input.getEffectiveMethod().uppercase()
 
         // Prevent empty strings (like trailing slashes) from becoming invalid team names
         val teamName = rawTeamName?.takeIf { it.isNotBlank() }?.decodeURL()
@@ -91,6 +124,153 @@ class ApiLambdaHandler(
                     actualPath.trimEnd('/') == "/roster" -> {
                         val roster = dynamoRepository.getRoster()
                         ApiResponse(body = objectMapper.writeValueAsString(roster))
+                    }
+
+                    // 5. GET /news (supports optional ?limit=N query parameter)
+                    actualPath.trimEnd('/') == "/news" && method == "GET" -> {
+                        val limit = input.queryStringParameters?.get("limit")?.toIntOrNull()
+                        val news = dynamoRepository.getNews(limit = limit)
+                        ApiResponse(body = objectMapper.writeValueAsString(news))
+                    }
+
+                    // 6. GET /news/{id}
+                    actualPath.startsWith("/news/") && method == "GET" -> {
+                        val id = actualPath.removePrefix("/news/").trim().decodeURL()
+                        if (id.isBlank()) {
+                            ApiResponse(statusCode = 400, body = """{"error": "Missing news ID"}""")
+                        } else {
+                            val article = dynamoRepository.getNewsById(id)
+                            if (article != null) {
+                                ApiResponse(body = objectMapper.writeValueAsString(article))
+                            } else {
+                                ApiResponse(
+                                    statusCode = 404,
+                                    body = """{"error": "News article not found", "id": "$id"}"""
+                                )
+                            }
+                        }
+                    }
+
+                    // 7. POST /admin/news/upload-url
+                    actualPath.trimEnd('/') == "/admin/news/upload-url" && method == "POST" -> {
+                        val body = input.body
+                        if (body.isNullOrBlank()) {
+                            ApiResponse(statusCode = 400, body = """{"error": "Request body is required"}""")
+                        } else {
+                            val uploadReq = objectMapper.readValue(body, GenerateUploadUrlRequest::class.java)
+                            if (uploadReq.newsId.isBlank() || uploadReq.fileName.isBlank() || uploadReq.contentType.isBlank()) {
+                                ApiResponse(statusCode = 400, body = """{"error": "newsId, fileName, and contentType are required"}""")
+                            } else if (!uploadReq.contentType.startsWith("image/")) {
+                                ApiResponse(statusCode = 400, body = """{"error": "Only image uploads are permitted"}""")
+                            } else {
+                                val uploadRes = s3StorageService.generatePresignedUploadUrl(uploadReq)
+                                ApiResponse(body = objectMapper.writeValueAsString(uploadRes))
+                            }
+                        }
+                    }
+
+                    // 8. GET /admin/news (returns all news, including unpublished and soft-deleted)
+                    actualPath.trimEnd('/') == "/admin/news" && method == "GET" -> {
+                        val allNews = dynamoRepository.getNews(includeUnpublished = true, includeDeleted = true)
+                        ApiResponse(body = objectMapper.writeValueAsString(allNews))
+                    }
+
+                    // 9. POST /admin/news (create article)
+                    actualPath.trimEnd('/') == "/admin/news" && method == "POST" -> {
+                        val body = input.body
+                        if (body.isNullOrBlank()) {
+                            ApiResponse(statusCode = 400, body = """{"error": "Request body is required"}""")
+                        } else {
+                            val req = objectMapper.readValue(body, CreateNewsRequest::class.java)
+                            if (req.title.isBlank() || req.mainPhotoUrl.isBlank()) {
+                                ApiResponse(statusCode = 400, body = """{"error": "title and mainPhotoUrl are mandatory fields"}""")
+                            } else {
+                                val now = java.time.Instant.now().toString()
+                                val slug = SlugGenerator.toSlug(req.title)
+                                val datePrefix = now.take(10)
+                                val uniqueSuffix = java.util.UUID.randomUUID().toString().take(6)
+                                val id = "$datePrefix-$slug-$uniqueSuffix"
+                                val excerpt = req.excerpt?.takeIf { it.isNotBlank() }
+                                    ?: SlugGenerator.extractExcerpt(req.contentHtml)
+
+                                val newsItem = NewsItem(
+                                    id = id,
+                                    title = req.title.trim(),
+                                    slug = slug,
+                                    mainPhotoUrl = req.mainPhotoUrl.trim(),
+                                    excerpt = excerpt,
+                                    contentHtml = req.contentHtml,
+                                    galleryPhotos = req.galleryPhotos,
+                                    createdAt = now,
+                                    published = req.published,
+                                    isDeleted = false
+                                )
+
+                                dynamoRepository.saveNews(newsItem)
+                                ApiResponse(statusCode = 201, body = objectMapper.writeValueAsString(newsItem))
+                            }
+                        }
+                    }
+
+                    // 10. PUT /admin/news/{id} (update article)
+                    actualPath.startsWith("/admin/news/") && method == "PUT" -> {
+                        val id = actualPath.removePrefix("/admin/news/").trim().decodeURL()
+                        val body = input.body
+                        if (id.isBlank() || body.isNullOrBlank()) {
+                            ApiResponse(statusCode = 400, body = """{"error": "News ID and body are required"}""")
+                        } else {
+                            val existing = dynamoRepository.getNewsById(id, includeDeleted = true)
+                            if (existing == null || existing.isDeleted) {
+                                ApiResponse(statusCode = 404, body = """{"error": "News article not found", "id": "$id"}""")
+                            } else {
+                                val req = objectMapper.readValue(body, UpdateNewsRequest::class.java)
+                                val now = java.time.Instant.now().toString()
+                                val reqTitle = req.title?.trim()
+                                val updatedTitle = if (!reqTitle.isNullOrBlank()) reqTitle else existing.title
+                                val updatedSlug = if (!reqTitle.isNullOrBlank()) SlugGenerator.toSlug(reqTitle) else existing.slug
+                                val reqMainPhoto = req.mainPhotoUrl?.trim()
+                                val updatedMainPhoto = if (!reqMainPhoto.isNullOrBlank()) reqMainPhoto else existing.mainPhotoUrl
+                                val updatedContent = req.contentHtml ?: existing.contentHtml
+                                val reqExcerpt = req.excerpt?.trim()
+                                val updatedExcerpt = if (!reqExcerpt.isNullOrBlank()) reqExcerpt
+                                    else if (req.contentHtml != null) SlugGenerator.extractExcerpt(updatedContent)
+                                    else existing.excerpt
+                                val updatedGallery = req.galleryPhotos ?: existing.galleryPhotos
+                                val updatedPublished = req.published ?: existing.published
+
+                                val updatedItem = existing.copy(
+                                    title = updatedTitle,
+                                    slug = updatedSlug,
+                                    mainPhotoUrl = updatedMainPhoto,
+                                    excerpt = updatedExcerpt,
+                                    contentHtml = updatedContent,
+                                    galleryPhotos = updatedGallery,
+                                    published = updatedPublished,
+                                    updatedAt = now
+                                )
+
+                                dynamoRepository.saveNews(updatedItem)
+                                ApiResponse(statusCode = 200, body = objectMapper.writeValueAsString(updatedItem))
+                            }
+                        }
+                    }
+
+                    // 11. DELETE /admin/news/{id} (soft-delete article)
+                    actualPath.startsWith("/admin/news/") && method == "DELETE" -> {
+                        val id = actualPath.removePrefix("/admin/news/").trim().decodeURL()
+                        if (id.isBlank()) {
+                            ApiResponse(statusCode = 400, body = """{"error": "News ID is required"}""")
+                        } else {
+                            val success = dynamoRepository.softDeleteNews(id)
+                            if (success) {
+                                ApiResponse(
+                                    statusCode = 200,
+                                    body = """{"message": "News article soft-deleted successfully", "id": "$id"}"""
+                                )
+                            } else {
+                                ApiResponse(statusCode = 404, body = """{"error": "News article not found", "id": "$id"}""")
+                            }
+                        }
                     }
 
                     else -> {

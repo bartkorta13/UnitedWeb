@@ -3,27 +3,29 @@ import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { LOCALE_ID } from '@angular/core';
 import { DatePipe, registerLocaleData } from '@angular/common';
+import { provideRouter } from '@angular/router';
 import localePl from '@angular/common/locales/pl';
-import { App } from './app';
+import { HomeView as App } from './views/home/home.view';
 import { LeagueApiService } from './core/api/league-api.service';
 import { MatchItem } from './core/api/league.models';
 
 registerLocaleData(localePl, 'pl');
 registerLocaleData(localePl, 'pl-PL');
 
-describe('App', () => {
+describe('HomeView', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [App],
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),
+        provideRouter([]),
         { provide: LOCALE_ID, useValue: 'pl' },
       ],
     }).compileComponents();
   });
 
-  it('should create the app', () => {
+  it('should create the home view', () => {
     const fixture = TestBed.createComponent(App);
     const app = fixture.componentInstance;
     expect(app).toBeTruthy();

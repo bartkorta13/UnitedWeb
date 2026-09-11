@@ -3,8 +3,9 @@ plugins {
 }
 
 dependencies {
-    // AWS SDK for Kotlin (DynamoDB)
+    // AWS SDK for Kotlin (DynamoDB & S3)
     implementation("aws.sdk.kotlin:dynamodb:1.0.60")
+    implementation("aws.sdk.kotlin:s3:1.0.60")
 
     // Kotlin Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.0")

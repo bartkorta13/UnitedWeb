@@ -17,8 +17,8 @@ fun main() {
         try {
             // Handle CORS Preflight
             exchange.responseHeaders.add("Access-Control-Allow-Origin", "*")
-            exchange.responseHeaders.add("Access-Control-Allow-Methods", "GET, OPTIONS")
-            exchange.responseHeaders.add("Access-Control-Allow-Headers", "Content-Type, Authorization")
+            exchange.responseHeaders.add("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+            exchange.responseHeaders.add("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With")
 
             if (exchange.requestMethod.equals("OPTIONS", ignoreCase = true)) {
                 exchange.sendResponseHeaders(204, -1)
@@ -37,10 +37,19 @@ fun main() {
                 key to value
             }
 
+            val headers = exchange.requestHeaders.entries.associate { (k, v) ->
+                k to v.joinToString(", ")
+            }
+
+            val body = exchange.requestBody.bufferedReader(StandardCharsets.UTF_8).use { it.readText() }
+
             val apiRequest = ApiRequest().apply {
                 this.rawPath = path
                 this.path = path
+                this.httpMethod = exchange.requestMethod
                 this.queryStringParameters = queryParams
+                this.headers = headers
+                this.body = body.takeIf { it.isNotBlank() }
             }
 
             val apiResponse = handler.handleRequest(apiRequest, null)
@@ -75,6 +84,13 @@ fun main() {
     println("   - http://localhost:$port/results")
     println("   - http://localhost:$port/results/United_%C5%9Aroda_%C5%9Al%C4%85ska")
     println("   - http://localhost:$port/roster")
+    println("   - http://localhost:$port/news")
+    println("   - http://localhost:$port/news/{id}")
+    println("   - [ADMIN] GET    http://localhost:$port/admin/news")
+    println("   - [ADMIN] POST   http://localhost:$port/admin/news")
+    println("   - [ADMIN] PUT    http://localhost:$port/admin/news/{id}")
+    println("   - [ADMIN] DELETE http://localhost:$port/admin/news/{id}")
+    println("   - [ADMIN] POST   http://localhost:$port/admin/news/upload-url")
     println("=========================================================")
 
     server.start()

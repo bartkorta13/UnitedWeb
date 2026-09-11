@@ -1,0 +1,72 @@
+<div class="login-page">
+  <div class="login-card">
+    <div class="login-header">
+      <div class="login-badge">Panel Administratora</div>
+      <h1 class="login-title">United Środa Śląska</h1>
+      <p class="login-subtitle">Zaloguj się, aby zarządzać aktualnościami i treściami klubu</p>
+    </div>
+
+    @if (errorMessage()) {
+      <div class="error-alert" role="alert">
+        <svg viewBox="0 0 20 20" width="18" height="18" fill="currentColor">
+          <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+        </svg>
+        <span>{{ errorMessage() }}</span>
+      </div>
+    }
+
+    <form class="login-form" (ngSubmit)="onSubmit()">
+      <div class="form-group">
+        <label for="email" class="form-label">Adres e-mail</label>
+        <div class="input-wrapper">
+          <input
+            id="email"
+            type="email"
+            class="form-input"
+            [ngModel]="email()"
+            (ngModelChange)="email.set($event)"
+            name="email"
+            placeholder="admin@united.pl"
+            autocomplete="email"
+            required
+            [disabled]="loading()"
+          />
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="password" class="form-label">Hasło</label>
+        <div class="input-wrapper">
+          <input
+            id="password"
+            type="password"
+            class="form-input"
+            [ngModel]="password()"
+            (ngModelChange)="password.set($event)"
+            name="password"
+            placeholder="••••••••"
+            autocomplete="current-password"
+            required
+            [disabled]="loading()"
+          />
+        </div>
+      </div>
+
+      <button type="submit" class="submit-btn" [disabled]="loading()">
+        @if (loading()) {
+          <span class="spinner"></span>
+          <span>Logowanie...</span>
+        } @else {
+          <span>Zaloguj się</span>
+          <svg viewBox="0 0 20 20" width="16" height="16" fill="currentColor">
+            <path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd" />
+          </svg>
+        }
+      </button>
+    </form>
+
+    <div class="login-footer">
+      <a routerLink="/" class="back-link">← Wróć do strony głównej</a>
+    </div>
+  </div>
+</div>

@@ -4,15 +4,21 @@ import aws.sdk.kotlin.services.dynamodb.DynamoDbClient
 import aws.sdk.kotlin.services.dynamodb.model.AttributeValue
 import aws.sdk.kotlin.services.dynamodb.model.BatchWriteItemRequest
 import aws.sdk.kotlin.services.dynamodb.model.DeleteRequest
+import aws.sdk.kotlin.services.dynamodb.model.GetItemRequest
+import aws.sdk.kotlin.services.dynamodb.model.PutItemRequest
 import aws.sdk.kotlin.services.dynamodb.model.PutRequest
-import aws.sdk.kotlin.services.dynamodb.model.WriteRequest
 import aws.sdk.kotlin.services.dynamodb.model.QueryRequest
+import aws.sdk.kotlin.services.dynamodb.model.UpdateItemRequest
+import aws.sdk.kotlin.services.dynamodb.model.WriteRequest
 import com.united.model.MatchItem
+import com.united.model.NewsItem
+import com.united.model.NewsSummary
 import com.united.model.PlayerItem
 import com.united.model.PlayerPosition
 import com.united.model.ScoreParser
 import com.united.model.TeamStanding
 import kotlinx.coroutines.delay
+import java.time.Instant
 import kotlin.time.Duration.Companion.milliseconds
 
 class DynamoRepository(
@@ -247,6 +253,163 @@ class DynamoRepository(
                     .thenBy { if (it.number == 0) 999 else it.number }
                     .thenBy { it.lastName }
             )
+        }
+    }
+
+    /**
+     * Saves or updates a news article in DynamoDB table 'LeagueData'.
+     */
+    suspend fun saveNews(news: NewsItem) {
+        DynamoDbClient.fromEnvironment().use { ddb ->
+            val item = mutableMapOf(
+                "PK" to AttributeValue.S("NEWS"),
+                "SK" to AttributeValue.S("ARTICLE#${news.id}"),
+                "id" to AttributeValue.S(news.id),
+                "title" to AttributeValue.S(news.title),
+                "slug" to AttributeValue.S(news.slug),
+                "mainPhotoUrl" to AttributeValue.S(news.mainPhotoUrl),
+                "excerpt" to AttributeValue.S(news.excerpt),
+                "contentHtml" to AttributeValue.S(news.contentHtml),
+                "createdAt" to AttributeValue.S(news.createdAt),
+                "published" to AttributeValue.Bool(news.published),
+                "isDeleted" to AttributeValue.Bool(news.isDeleted)
+            )
+            if (news.galleryPhotos.isNotEmpty()) {
+                item["galleryPhotos"] = AttributeValue.L(news.galleryPhotos.map { AttributeValue.S(it) })
+            } else {
+                item["galleryPhotos"] = AttributeValue.L(emptyList())
+            }
+            news.updatedAt?.let { item["updatedAt"] = AttributeValue.S(it) }
+            news.deletedAt?.let { item["deletedAt"] = AttributeValue.S(it) }
+
+            val request = PutItemRequest {
+                tableName = this@DynamoRepository.tableName
+                this.item = item
+            }
+            ddb.putItem(request)
+        }
+    }
+
+    /**
+     * Fetches news summaries from DynamoDB, sorted by createdAt descending.
+     * By default, excludes soft-deleted and unpublished news articles.
+     */
+    suspend fun getNews(
+        limit: Int? = null,
+        includeUnpublished: Boolean = false,
+        includeDeleted: Boolean = false
+    ): List<NewsSummary> {
+        DynamoDbClient.fromEnvironment().use { ddb ->
+            val request = QueryRequest {
+                tableName = this@DynamoRepository.tableName
+                keyConditionExpression = "PK = :pk"
+                expressionAttributeValues = mapOf(
+                    ":pk" to AttributeValue.S("NEWS")
+                )
+            }
+
+            val response = ddb.query(request)
+            val items = response.items ?: emptyList()
+
+            val newsSummaries = items.mapNotNull { item ->
+                val isDeleted = (item["isDeleted"] as? AttributeValue.Bool)?.value ?: false
+                if (!includeDeleted && isDeleted) return@mapNotNull null
+
+                val published = (item["published"] as? AttributeValue.Bool)?.value ?: true
+                if (!includeUnpublished && !published) return@mapNotNull null
+
+                val id = (item["id"] as? AttributeValue.S)?.value
+                    ?: (item["SK"] as? AttributeValue.S)?.value?.removePrefix("ARTICLE#")
+                    ?: return@mapNotNull null
+
+                NewsSummary(
+                    id = id,
+                    title = (item["title"] as? AttributeValue.S)?.value ?: "",
+                    slug = (item["slug"] as? AttributeValue.S)?.value ?: "",
+                    mainPhotoUrl = (item["mainPhotoUrl"] as? AttributeValue.S)?.value ?: "",
+                    excerpt = (item["excerpt"] as? AttributeValue.S)?.value ?: "",
+                    createdAt = (item["createdAt"] as? AttributeValue.S)?.value ?: "",
+                    published = published
+                )
+            }.sortedByDescending { it.createdAt }
+
+            return if (limit != null && limit > 0) {
+                newsSummaries.take(limit)
+            } else {
+                newsSummaries
+            }
+        }
+    }
+
+    /**
+     * Fetches a single news article by ID.
+     * Returns null if the article does not exist or has been soft-deleted (unless includeDeleted = true).
+     */
+    suspend fun getNewsById(id: String, includeDeleted: Boolean = false): NewsItem? {
+        DynamoDbClient.fromEnvironment().use { ddb ->
+            val request = GetItemRequest {
+                tableName = this@DynamoRepository.tableName
+                key = mapOf(
+                    "PK" to AttributeValue.S("NEWS"),
+                    "SK" to AttributeValue.S("ARTICLE#$id")
+                )
+            }
+
+            val response = ddb.getItem(request)
+            val item = response.item ?: return null
+
+            val isDeleted = (item["isDeleted"] as? AttributeValue.Bool)?.value ?: false
+            if (!includeDeleted && isDeleted) return null
+
+            val gallery = (item["galleryPhotos"] as? AttributeValue.L)?.value
+                ?.mapNotNull { (it as? AttributeValue.S)?.value } ?: emptyList()
+
+            return NewsItem(
+                id = (item["id"] as? AttributeValue.S)?.value ?: id,
+                title = (item["title"] as? AttributeValue.S)?.value ?: "",
+                slug = (item["slug"] as? AttributeValue.S)?.value ?: "",
+                mainPhotoUrl = (item["mainPhotoUrl"] as? AttributeValue.S)?.value ?: "",
+                excerpt = (item["excerpt"] as? AttributeValue.S)?.value ?: "",
+                contentHtml = (item["contentHtml"] as? AttributeValue.S)?.value ?: "",
+                galleryPhotos = gallery,
+                createdAt = (item["createdAt"] as? AttributeValue.S)?.value ?: "",
+                updatedAt = (item["updatedAt"] as? AttributeValue.S)?.value,
+                published = (item["published"] as? AttributeValue.Bool)?.value ?: true,
+                isDeleted = isDeleted,
+                deletedAt = (item["deletedAt"] as? AttributeValue.S)?.value
+            )
+        }
+    }
+
+    /**
+     * Soft deletes a news article by marking isDeleted = true, deletedAt = now, and published = false.
+     * Does NOT permanently delete the item from DynamoDB.
+     * Permanent hard deletes can only be performed manually via the AWS Console or explicit admin script.
+     */
+    suspend fun softDeleteNews(id: String): Boolean {
+        DynamoDbClient.fromEnvironment().use { ddb ->
+            val now = Instant.now().toString()
+            val request = UpdateItemRequest {
+                tableName = this@DynamoRepository.tableName
+                key = mapOf(
+                    "PK" to AttributeValue.S("NEWS"),
+                    "SK" to AttributeValue.S("ARTICLE#$id")
+                )
+                updateExpression = "SET isDeleted = :del, deletedAt = :delAt, published = :pub"
+                conditionExpression = "attribute_exists(PK) AND attribute_exists(SK)"
+                expressionAttributeValues = mapOf(
+                    ":del" to AttributeValue.Bool(true),
+                    ":delAt" to AttributeValue.S(now),
+                    ":pub" to AttributeValue.Bool(false)
+                )
+            }
+
+            return try {
+                ddb.updateItem(request)
+                true
+            } catch (_: Exception) {
+                false
+            }
         }
     }
 }

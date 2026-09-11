@@ -1,0 +1,149 @@
+<div class="news-detail-page">
+  <div class="page-container">
+    <!-- Back button & Breadcrumbs -->
+    <div class="navigation-bar">
+      <a routerLink="/aktualnosci" class="back-link">
+        <svg class="back-icon" viewBox="0 0 20 20" fill="currentColor" width="18" height="18">
+          <path fill-rule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clip-rule="evenodd" />
+        </svg>
+        <span>Wróć do aktualności</span>
+      </a>
+
+      <nav class="breadcrumbs" aria-label="Ścieżka">
+        <a routerLink="/">Strona Główna</a>
+        <span>/</span>
+        <a routerLink="/aktualnosci">Aktualności</a>
+      </nav>
+    </div>
+
+    @if (loading()) {
+      <div class="article-loading-state">
+        <div class="spinner"></div>
+        <p>Wczytywanie artykułu…</p>
+      </div>
+    } @else if (error() || !article()) {
+      <div class="article-error-state">
+        <h2>Nie znaleziono artykułu</h2>
+        <p>Artykuł o podanym identyfikatorze nie istnieje lub został zarchiwizowany.</p>
+        <a routerLink="/aktualnosci" class="btn btn-primary">Zobacz pozostałe wiadomości</a>
+      </div>
+    } @else {
+      <article class="article-container">
+        <!-- Header -->
+        <header class="article-header">
+          <div class="article-meta">
+            <time class="meta-date" [attr.datetime]="article()!.createdAt">
+              {{ article()!.createdAt | date: 'd MMMM yyyy' : '' : 'pl' }}
+            </time>
+            <span class="meta-separator">•</span>
+            <span class="meta-category">KS UNITED ŚRODA ŚLĄSKA</span>
+          </div>
+
+          <h1 class="article-title">{{ article()!.title }}</h1>
+
+          @if (article()!.excerpt) {
+            <p class="article-lead">{{ article()!.excerpt }}</p>
+          }
+        </header>
+
+        <!-- Main Photo Hero Banner -->
+        <div class="article-hero-media">
+          <img
+            [src]="article()!.mainPhotoUrl"
+            [alt]="article()!.title"
+            class="hero-img"
+          />
+        </div>
+
+        <!-- Rich Article Content -->
+        <div class="article-body">
+          <div class="news-article-content" [innerHTML]="article()!.contentHtml"></div>
+        </div>
+
+        <!-- Optional Gallery Section -->
+        @if (article()!.galleryPhotos.length > 0) {
+          <section class="gallery-section">
+            <div class="gallery-header">
+              <div class="gallery-titles">
+                <p class="section-eyebrow">ZDJĘCIA Z MECZU / WYDARZENIA</p>
+                <h2 class="gallery-title">GALERIA <span class="highlight-green">ZDJĘĆ</span></h2>
+              </div>
+              <span class="gallery-badge">{{ article()!.galleryPhotos.length }} zdjęć</span>
+            </div>
+
+            <div class="gallery-grid">
+              @for (photoUrl of article()!.galleryPhotos; track photoUrl; let idx = $index) {
+                <button
+                  type="button"
+                  class="gallery-thumbnail-btn"
+                  (click)="openLightbox(idx)"
+                  [attr.aria-label]="'Otwórz zdjęcie ' + (idx + 1)"
+                >
+                  <img [src]="photoUrl" alt="Zdjęcie z galerii" loading="lazy" class="thumbnail-img" />
+                  <div class="thumbnail-overlay">
+                    <svg viewBox="0 0 20 20" fill="currentColor" width="24" height="24">
+                      <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd" />
+                    </svg>
+                  </div>
+                </button>
+              }
+            </div>
+          </section>
+        }
+
+        <!-- Bottom Navigation CTA -->
+        <div class="article-footer-nav">
+          <a routerLink="/aktualnosci" class="btn btn-outline">
+            ← Wszystkie aktualności
+          </a>
+          <a routerLink="/" class="btn btn-primary">
+            Strona Główna
+          </a>
+        </div>
+      </article>
+    }
+  </div>
+
+  <!-- Fullscreen Lightbox Modal -->
+  @if (lightboxOpen() && article()?.galleryPhotos?.length) {
+    <div class="lightbox-backdrop" (click)="closeLightbox()" role="dialog" aria-modal="true">
+      <button
+        type="button"
+        class="lightbox-close-btn"
+        (click)="closeLightbox()"
+        aria-label="Zamknij podgląd"
+      >
+        ✕
+      </button>
+
+      <button
+        type="button"
+        class="lightbox-nav-btn prev"
+        (click)="prevPhoto($event)"
+        aria-label="Poprzednie zdjęcie"
+      >
+        ❮
+      </button>
+
+      <div class="lightbox-content" (click)="$event.stopPropagation()">
+        <img
+          [src]="article()!.galleryPhotos[activePhotoIndex()]"
+          alt="Powiększone zdjęcie"
+          class="lightbox-main-img"
+        />
+        <div class="lightbox-counter">
+          Zdjęcie {{ activePhotoIndex() + 1 }} z {{ article()!.galleryPhotos.length }}
+        </div>
+      </div>
+
+      <button
+        type="button"
+        class="lightbox-nav-btn next"
+        (click)="nextPhoto($event)"
+        aria-label="Następne zdjęcie"
+      >
+        ❯
+      </button>
+    </div>
+  }
+</div>

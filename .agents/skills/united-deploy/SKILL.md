@@ -62,11 +62,11 @@ This skill outlines the steps to build and deploy the frontend, backend, and inf
 
 3. **Upload Static Assets to S3**:
    ```bash
-   # Sync hashed JS/CSS chunks with long cache
-   aws s3 sync dist/web/browser/ s3://<FRONTEND_BUCKET> --delete
+   # Sync hashed JS/CSS chunks with long cache to /app/ folder in unified storage
+   aws s3 sync dist/web/browser/ s3://<STORAGE_BUCKET>/app/ --delete
 
    # Ensure index.html is not aggressively cached
-   aws s3 cp dist/web/browser/index.html s3://<FRONTEND_BUCKET>/index.html \
+   aws s3 cp dist/web/browser/index.html s3://<STORAGE_BUCKET>/app/index.html \
      --cache-control "no-cache, no-store, must-revalidate"
    ```
 

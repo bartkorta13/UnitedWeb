@@ -1,0 +1,264 @@
+<div class="news-editor-page">
+  <!-- Top Navigation & Title -->
+  <div class="editor-header">
+    <div class="header-breadcrumb">
+      <a routerLink="/admin/aktualnosci" class="back-link">
+        <svg viewBox="0 0 20 20" width="16" height="16" fill="currentColor">
+          <path fill-rule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clip-rule="evenodd" />
+        </svg>
+        <span>Wróć do listy aktualności</span>
+      </a>
+    </div>
+
+    <div class="header-main">
+      <h1 class="page-title">
+        @if (isEditMode()) {
+          Edycja artykułu
+        } @else {
+          Nowy artykuł
+        }
+      </h1>
+
+      <div class="header-actions">
+        <button
+          type="button"
+          class="btn-secondary"
+          [disabled]="saving()"
+          (click)="saveArticle(false)"
+        >
+          Zapisz jako szkic
+        </button>
+
+        <button
+          type="button"
+          class="btn-primary"
+          [disabled]="saving()"
+          (click)="saveArticle(true)"
+        >
+          @if (saving()) {
+            <span class="spinner-small"></span>
+            <span>Zapisywanie...</span>
+          } @else {
+            <span>{{ isEditMode() ? 'Zapisz zmiany' : 'Opublikuj artykuł' }}</span>
+          }
+        </button>
+      </div>
+    </div>
+  </div>
+
+  @if (errorMessage()) {
+    <div class="error-banner" role="alert">
+      <svg viewBox="0 0 20 20" width="18" height="18" fill="currentColor">
+        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+      </svg>
+      <span>{{ errorMessage() }}</span>
+    </div>
+  }
+
+  @if (uploadError()) {
+    <div class="error-banner" role="alert">
+      <span>{{ uploadError() }}</span>
+    </div>
+  }
+
+  <!-- Main Form Grid -->
+  <div class="editor-grid">
+    <!-- Left Main Column -->
+    <div class="editor-main-col">
+      <!-- Title Input -->
+      <div class="form-card">
+        <div class="form-group">
+          <label for="newsTitle" class="form-label required">Tytuł artykułu</label>
+          <input
+            id="newsTitle"
+            type="text"
+            class="form-input-title"
+            [ngModel]="title()"
+            (ngModelChange)="onTitleChange($event)"
+            placeholder="Wprowadź przyciągający tytuł..."
+            maxlength="200"
+            required
+          />
+        </div>
+
+        <div class="form-group slug-group">
+          <label for="newsSlug" class="form-label">Adres URL (slug)</label>
+          <div class="slug-input-wrapper">
+            <span class="slug-prefix">/aktualnosci/</span>
+            <input
+              id="newsSlug"
+              type="text"
+              class="form-input-slug"
+              [ngModel]="slug()"
+              (ngModelChange)="onSlugChange($event)"
+              placeholder="adres-artykulu"
+            />
+          </div>
+        </div>
+      </div>
+
+      <!-- TipTap Rich Text Editor -->
+      <div class="form-card">
+        <label class="form-label">Treść artykułu</label>
+        <p class="form-hint">Sformatuj treść za pomocą paska narzędzi. Dodawaj nagłówki, cytaty i odnośniki.</p>
+        <app-tiptap-editor
+          [content]="contentHtml()"
+          (contentChange)="contentHtml.set($event)"
+        ></app-tiptap-editor>
+      </div>
+
+      <!-- Gallery Photos Section -->
+      <div class="form-card">
+        <div class="gallery-header">
+          <div>
+            <h3 class="form-label">Galeria zdjęć (opcjonalnie)</h3>
+            <p class="form-hint">Dołącz dodatkowe zdjęcia z meczu lub wydarzenia. Zdjęcia będą wyświetlane w postaci siatki z powiększeniem Lightbox.</p>
+          </div>
+          @if (uploadingGalleryPhoto()) {
+            <div class="upload-badge">
+              <span class="spinner-small"></span>
+              <span>Wgrywanie zdjęć do chmury...</span>
+            </div>
+          }
+        </div>
+
+        <!-- Gallery Dropzone -->
+        <div
+          class="gallery-dropzone"
+          (dragover)="$event.preventDefault()"
+          (drop)="onGalleryPhotosDropped($event)"
+          (click)="galleryFileInput.click()"
+        >
+          <input
+            #galleryFileInput
+            type="file"
+            accept="image/*"
+            multiple
+            class="hidden-file-input"
+            (change)="onGalleryPhotosSelected($event)"
+          />
+          <svg viewBox="0 0 24 24" width="32" height="32" fill="currentColor">
+            <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
+          </svg>
+          <span class="dropzone-text">Kliknij lub przeciągnij zdjęcia, aby dodać je do galerii</span>
+          <span class="dropzone-subtext">JPG, PNG, WEBP (Możesz wybrać wiele plików jednocześnie)</span>
+        </div>
+
+        <!-- Gallery Thumbnails Grid -->
+        @if (galleryPhotos().length > 0) {
+          <div class="gallery-preview-grid">
+            @for (photoUrl of galleryPhotos(); track photoUrl; let idx = $index) {
+              <div class="gallery-preview-item">
+                <img [src]="photoUrl" alt="Zdjęcie z galerii" class="gallery-thumb" loading="lazy" />
+                <button
+                  type="button"
+                  class="gallery-remove-btn"
+                  (click)="removeGalleryPhoto(idx)"
+                  title="Usuń zdjęcie z galerii"
+                >
+                  ✕
+                </button>
+              </div>
+            }
+          </div>
+        }
+      </div>
+    </div>
+
+    <!-- Right Sidebar Column -->
+    <div class="editor-sidebar-col">
+      <!-- Main Photo Card -->
+      <div class="form-card">
+        <label class="form-label required">Zdjęcie główne (Wymagane)</label>
+        <p class="form-hint">Zdjęcie wyświetlane na karcie w aktualnościach oraz jako nagłówek artykułu (proporcja 16:9).</p>
+
+        @if (mainPhotoUrl()) {
+          <div class="main-photo-preview">
+            <img [src]="mainPhotoUrl()" alt="Podgląd zdjęcia głównego" class="preview-img" />
+            <div class="photo-overlay-actions">
+              <button
+                type="button"
+                class="photo-action-btn"
+                (click)="mainFileInput.click()"
+                title="Zmień zdjęcie"
+              >
+                Zmień
+              </button>
+              <button
+                type="button"
+                class="photo-action-btn delete"
+                (click)="removeMainPhoto()"
+                title="Usuń zdjęcie"
+              >
+                Usuń
+              </button>
+            </div>
+          </div>
+        } @else {
+          <div
+            class="main-photo-dropzone"
+            [class.is-uploading]="uploadingMainPhoto()"
+            (dragover)="$event.preventDefault()"
+            (drop)="onMainPhotoDropped($event)"
+            (click)="mainFileInput.click()"
+          >
+            @if (uploadingMainPhoto()) {
+              <div class="uploading-state">
+                <span class="spinner-small"></span>
+                <span>Przesyłanie do S3...</span>
+              </div>
+            } @else {
+              <svg viewBox="0 0 24 24" width="36" height="36" fill="currentColor">
+                <path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z" />
+              </svg>
+              <span class="dropzone-text">Wybierz lub przeciągnij zdjęcie główne</span>
+              <span class="dropzone-subtext">JPG, PNG, WEBP</span>
+            }
+          </div>
+        }
+
+        <input
+          #mainFileInput
+          type="file"
+          accept="image/*"
+          class="hidden-file-input"
+          (change)="onMainPhotoSelected($event)"
+        />
+      </div>
+
+      <!-- Excerpt Card -->
+      <div class="form-card">
+        <label for="newsExcerpt" class="form-label">Krótki opis (Zajawka)</label>
+        <p class="form-hint">Tekst widoczny na liście artykułów. Jeśli pozostawisz puste, zajawka zostanie wygenerowana automatycznie z treści.</p>
+        <textarea
+          id="newsExcerpt"
+          class="form-textarea"
+          rows="4"
+          [ngModel]="excerpt()"
+          (ngModelChange)="excerpt.set($event)"
+          placeholder="Wprowadź krótki wstęp..."
+          maxlength="300"
+        ></textarea>
+        <span class="char-counter">{{ excerpt().length }}/300</span>
+      </div>
+
+      <!-- Publishing Status Card -->
+      <div class="form-card">
+        <h3 class="form-label">Widoczność wpisu</h3>
+        <label class="toggle-checkbox-label">
+          <input
+            type="checkbox"
+            class="form-checkbox"
+            [ngModel]="published()"
+            (ngModelChange)="published.set($event)"
+          />
+          <div class="checkbox-custom"></div>
+          <div class="checkbox-text">
+            <strong>Opublikuj artykuł</strong>
+            <span>Artykuł będzie od razu widoczny dla kibiców na stronie głównej oraz podstronie aktualności.</span>
+          </div>
+        </label>
+      </div>
+    </div>
+  </div>
+</div>

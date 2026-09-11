@@ -21,16 +21,37 @@ resource "aws_iam_role_policy_attachment" "lambda_logs" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
-# Attach DynamoDB Read permissions (adjust table name if needed)
-resource "aws_iam_role_policy" "dynamodb_read" {
-  name = "dynamodb_read_access"
+# Attach DynamoDB Read & Write permissions
+resource "aws_iam_role_policy" "dynamodb_access" {
+  name = "dynamodb_access"
+  role = aws_iam_role.lambda_exec.id
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Action = [
+        "dynamodb:Query",
+        "dynamodb:Scan",
+        "dynamodb:GetItem",
+        "dynamodb:PutItem",
+        "dynamodb:UpdateItem",
+        "dynamodb:BatchWriteItem"
+      ]
+      Resource = "*"
+    }]
+  })
+}
+
+# Attach S3 PutObject permission for generating pre-signed upload URLs
+resource "aws_iam_role_policy" "s3_upload_policy" {
+  name = "s3_upload_access"
   role = aws_iam_role.lambda_exec.id
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{
       Effect   = "Allow"
-      Action   = ["dynamodb:Query", "dynamodb:Scan", "dynamodb:GetItem"]
-      Resource = "*"
+      Action   = ["s3:PutObject"]
+      Resource = "${aws_s3_bucket.assets.arn}/*"
     }]
   })
 }
@@ -48,6 +69,13 @@ resource "aws_lambda_function" "api_lambda" {
   runtime = "java21"
   timeout = 15
   memory_size = 512
+
+  environment {
+    variables = {
+      ASSETS_S3_BUCKET = aws_s3_bucket.assets.id
+      ASSETS_CDN_URL   = "https://${aws_cloudfront_distribution.assets_cdn.domain_name}"
+    }
+  }
 }
 
 # 3. API Gateway
@@ -57,8 +85,8 @@ resource "aws_apigatewayv2_api" "http_api" {
 
   cors_configuration {
     allow_origins = ["*"]
-    allow_methods = ["GET", "OPTIONS"]
-    allow_headers = ["content-type"]
+    allow_methods = ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+    allow_headers = ["content-type", "authorization"]
   }
 }
 
@@ -108,6 +136,117 @@ resource "aws_apigatewayv2_route" "get_roster" {
   target    = "integrations/${aws_apigatewayv2_integration.lambda_proxy.id}"
 }
 
+resource "aws_apigatewayv2_route" "get_news" {
+  api_id    = aws_apigatewayv2_api.http_api.id
+  route_key = "GET /news"
+  target    = "integrations/${aws_apigatewayv2_integration.lambda_proxy.id}"
+}
+
+resource "aws_apigatewayv2_route" "get_news_by_id" {
+  api_id    = aws_apigatewayv2_api.http_api.id
+  route_key = "GET /news/{id}"
+  target    = "integrations/${aws_apigatewayv2_integration.lambda_proxy.id}"
+}
+
+# ------------------------------------------------------------------------------
+# 4a. Cognito User Pool: Authentication for Admin Panel
+# ------------------------------------------------------------------------------
+resource "aws_cognito_user_pool" "admin_pool" {
+  name = "united-admin-user-pool"
+
+  username_attributes      = ["email"]
+  auto_verified_attributes = ["email"]
+
+  admin_create_user_config {
+    allow_admin_create_user_only = true
+  }
+
+  password_policy {
+    minimum_length    = 8
+    require_lowercase = true
+    require_numbers   = true
+    require_symbols   = false
+    require_uppercase = true
+  }
+
+  tags = {
+    Project     = "UnitedWeb"
+    Environment = "production"
+  }
+}
+
+resource "aws_cognito_user_pool_client" "admin_client" {
+  name         = "united-admin-client"
+  user_pool_id = aws_cognito_user_pool.admin_pool.id
+
+  explicit_auth_flows = [
+    "ALLOW_USER_PASSWORD_AUTH",
+    "ALLOW_REFRESH_TOKEN_AUTH",
+    "ALLOW_USER_SRP_AUTH"
+  ]
+
+  generate_secret               = false
+  prevent_user_existence_errors = "ENABLED"
+}
+
+# ------------------------------------------------------------------------------
+# 4b. API Gateway JWT Authorizer for Cognito
+# ------------------------------------------------------------------------------
+resource "aws_apigatewayv2_authorizer" "cognito" {
+  api_id           = aws_apigatewayv2_api.http_api.id
+  authorizer_type  = "JWT"
+  identity_sources = ["$request.header.Authorization"]
+  name             = "united-cognito-authorizer"
+
+  jwt_configuration {
+    audience = [aws_cognito_user_pool_client.admin_client.id]
+    issuer   = "https://${aws_cognito_user_pool.admin_pool.endpoint}"
+  }
+}
+
+# ------------------------------------------------------------------------------
+# 4c. Protected Admin Routes (Requires Cognito JWT)
+# ------------------------------------------------------------------------------
+resource "aws_apigatewayv2_route" "get_admin_news" {
+  api_id             = aws_apigatewayv2_api.http_api.id
+  route_key          = "GET /admin/news"
+  target             = "integrations/${aws_apigatewayv2_integration.lambda_proxy.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.cognito.id
+}
+
+resource "aws_apigatewayv2_route" "post_admin_news" {
+  api_id             = aws_apigatewayv2_api.http_api.id
+  route_key          = "POST /admin/news"
+  target             = "integrations/${aws_apigatewayv2_integration.lambda_proxy.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.cognito.id
+}
+
+resource "aws_apigatewayv2_route" "put_admin_news" {
+  api_id             = aws_apigatewayv2_api.http_api.id
+  route_key          = "PUT /admin/news/{id}"
+  target             = "integrations/${aws_apigatewayv2_integration.lambda_proxy.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.cognito.id
+}
+
+resource "aws_apigatewayv2_route" "delete_admin_news" {
+  api_id             = aws_apigatewayv2_api.http_api.id
+  route_key          = "DELETE /admin/news/{id}"
+  target             = "integrations/${aws_apigatewayv2_integration.lambda_proxy.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.cognito.id
+}
+
+resource "aws_apigatewayv2_route" "post_upload_url" {
+  api_id             = aws_apigatewayv2_api.http_api.id
+  route_key          = "POST /admin/news/upload-url"
+  target             = "integrations/${aws_apigatewayv2_integration.lambda_proxy.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.cognito.id
+}
+
 # 5. API Gateway Stage
 resource "aws_apigatewayv2_stage" "default_stage" {
   api_id      = aws_apigatewayv2_api.http_api.id
@@ -153,6 +292,22 @@ resource "aws_s3_bucket_public_access_block" "assets_access" {
   restrict_public_buckets = true
 }
 
+# Allow direct browser uploads via S3 Pre-signed PUT URLs (Local dev + Production UI)
+resource "aws_s3_bucket_cors_configuration" "assets_cors" {
+  bucket = aws_s3_bucket.assets.id
+
+  cors_rule {
+    allowed_headers = ["*"]
+    allowed_methods = ["PUT", "GET", "HEAD"]
+    allowed_origins = [
+      "http://localhost:4200",
+      "https://${aws_cloudfront_distribution.frontend_cdn.domain_name}"
+    ]
+    expose_headers  = ["ETag"]
+    max_age_seconds = 3000
+  }
+}
+
 # ------------------------------------------------------------------------------
 # 9. CloudFront Origin Access Control (OAC)
 # ------------------------------------------------------------------------------
@@ -170,7 +325,7 @@ data "aws_cloudfront_cache_policy" "caching_optimized" {
 }
 
 # ------------------------------------------------------------------------------
-# 10. CloudFront Distribution (Global CDN)
+# 10. CloudFront Distribution: Media Assets (Global CDN with /assets path)
 # ------------------------------------------------------------------------------
 resource "aws_cloudfront_distribution" "assets_cdn" {
   enabled             = true
@@ -182,6 +337,7 @@ resource "aws_cloudfront_distribution" "assets_cdn" {
     domain_name              = aws_s3_bucket.assets.bucket_regional_domain_name
     origin_id                = "S3-${aws_s3_bucket.assets.id}"
     origin_access_control_id = aws_cloudfront_origin_access_control.assets_oac.id
+    origin_path              = "/assets"
   }
 
   default_cache_behavior {
@@ -210,7 +366,64 @@ resource "aws_cloudfront_distribution" "assets_cdn" {
 }
 
 # ------------------------------------------------------------------------------
-# 11. S3 Bucket Policy: Only CloudFront can read files
+# 11. CloudFront Distribution: Frontend UI (Global CDN with /app path & SPA Fallback)
+# ------------------------------------------------------------------------------
+resource "aws_cloudfront_distribution" "frontend_cdn" {
+  enabled             = true
+  is_ipv6_enabled     = true
+  comment             = "CloudFront CDN for United Frontend UI"
+  default_root_object = "index.html"
+  price_class         = "PriceClass_100" # Europe, USA, Canada
+
+  origin {
+    domain_name              = aws_s3_bucket.assets.bucket_regional_domain_name
+    origin_id                = "S3-${aws_s3_bucket.assets.id}"
+    origin_access_control_id = aws_cloudfront_origin_access_control.assets_oac.id
+    origin_path              = "/app"
+  }
+
+  default_cache_behavior {
+    target_origin_id       = "S3-${aws_s3_bucket.assets.id}"
+    viewer_protocol_policy = "redirect-to-https"
+    allowed_methods        = ["GET", "HEAD", "OPTIONS"]
+    cached_methods         = ["GET", "HEAD"]
+    cache_policy_id        = data.aws_cloudfront_cache_policy.caching_optimized.id
+    compress               = true
+  }
+
+  # SPA Routing Fix: 403 & 404 redirected to /index.html with HTTP 200
+  custom_error_response {
+    error_code            = 403
+    response_code         = 200
+    response_page_path    = "/index.html"
+    error_caching_min_ttl = 10
+  }
+
+  custom_error_response {
+    error_code            = 404
+    response_code         = 200
+    response_page_path    = "/index.html"
+    error_caching_min_ttl = 10
+  }
+
+  restrictions {
+    geo_restriction {
+      restriction_type = "none"
+    }
+  }
+
+  viewer_certificate {
+    cloudfront_default_certificate = true
+  }
+
+  tags = {
+    Project     = "UnitedWeb"
+    Environment = "production"
+  }
+}
+
+# ------------------------------------------------------------------------------
+# 12. S3 Bucket Policy: Allows both CloudFront distributions to read files via OAC
 # ------------------------------------------------------------------------------
 resource "aws_s3_bucket_policy" "assets_oac_policy" {
   bucket = aws_s3_bucket.assets.id
@@ -228,7 +441,10 @@ resource "aws_s3_bucket_policy" "assets_oac_policy" {
         Resource = "${aws_s3_bucket.assets.arn}/*"
         Condition = {
           StringEquals = {
-            "AWS:SourceArn" = aws_cloudfront_distribution.assets_cdn.arn
+            "AWS:SourceArn" = [
+              aws_cloudfront_distribution.assets_cdn.arn,
+              aws_cloudfront_distribution.frontend_cdn.arn
+            ]
           }
         }
       }
@@ -237,14 +453,44 @@ resource "aws_s3_bucket_policy" "assets_oac_policy" {
 }
 
 # ------------------------------------------------------------------------------
-# 12. Asset Outputs
+# 13. Outputs
 # ------------------------------------------------------------------------------
-output "assets_bucket_name" {
-  description = "S3 bucket name to upload assets/logos to via AWS CLI or Console"
+output "storage_bucket_name" {
+  description = "Single S3 bucket for both /app and /assets"
   value       = aws_s3_bucket.assets.id
 }
 
+output "assets_bucket_name" {
+  description = "Single S3 bucket name (alias for backwards compatibility)"
+  value       = aws_s3_bucket.assets.id
+}
+
+output "frontend_cdn_url" {
+  description = "Public HTTPS URL for the UnitedWeb Frontend application"
+  value       = "https://${aws_cloudfront_distribution.frontend_cdn.domain_name}"
+}
+
 output "assets_cdn_url" {
-  description = "CloudFront CDN Base URL for your frontend"
+  description = "CloudFront CDN Base URL for media assets (photos & logos)"
   value       = "https://${aws_cloudfront_distribution.assets_cdn.domain_name}"
+}
+
+output "frontend_distribution_id" {
+  description = "CloudFront Distribution ID for running frontend cache invalidations"
+  value       = aws_cloudfront_distribution.frontend_cdn.id
+}
+
+output "assets_distribution_id" {
+  description = "CloudFront Distribution ID for running assets cache invalidations"
+  value       = aws_cloudfront_distribution.assets_cdn.id
+}
+
+output "cognito_user_pool_id" {
+  description = "ID of the Cognito User Pool for admin authentication"
+  value       = aws_cognito_user_pool.admin_pool.id
+}
+
+output "cognito_client_id" {
+  description = "Client ID of the Cognito User Pool Client for web frontend"
+  value       = aws_cognito_user_pool_client.admin_client.id
 }

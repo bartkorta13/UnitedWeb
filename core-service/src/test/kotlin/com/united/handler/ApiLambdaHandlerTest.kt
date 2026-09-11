@@ -1,8 +1,10 @@
 package com.united.handler
 
+import com.united.model.GenerateUploadUrlResponse
 import com.united.model.MatchItem
 import com.united.model.TeamStanding
 import com.united.repository.DynamoRepository
+import com.united.storage.S3MediaStorageService
 import io.mockk.coEvery
 import io.mockk.mockk
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -11,7 +13,8 @@ import org.junit.jupiter.api.Test
 class ApiLambdaHandlerTest {
 
     private val mockRepository = mockk<DynamoRepository>()
-    private val handler = ApiLambdaHandler(mockRepository)
+    private val mockS3Service = mockk<S3MediaStorageService>()
+    private val handler = ApiLambdaHandler(mockRepository, mockS3Service)
 
     @Test
     fun `should return standings on GET standings path`() {
@@ -173,5 +176,226 @@ class ApiLambdaHandlerTest {
         assert(response.body.contains("Kowalski"))
         assert(response.body.contains("SETTER"))
         assert(response.body.contains("192"))
+    }
+
+    @Test
+    fun `should return news summaries on GET news path with optional limit`() {
+        // Given
+        val fakeNews = listOf(
+            com.united.model.NewsSummary(
+                id = "news-1",
+                title = "Wielkie zwycięstwo!",
+                slug = "wielkie-zwyciestwo",
+                mainPhotoUrl = "https://cdn.example.com/news/news-1/main.jpg",
+                excerpt = "Świetny mecz przed własną publicznością.",
+                createdAt = "2026-03-10T18:00:00Z",
+                published = true
+            )
+        )
+        coEvery { mockRepository.getNews(limit = 3) } returns fakeNews
+
+        val request = ApiRequest().apply {
+            rawPath = "/news"
+            queryStringParameters = mapOf("limit" to "3")
+        }
+
+        // When
+        val response = handler.handleRequest(request, null)
+
+        // Then
+        assertEquals(200, response.statusCode)
+        assert(response.body.contains("Wielkie zwycięstwo!"))
+        assert(response.body.contains("wielkie-zwyciestwo"))
+    }
+
+    @Test
+    fun `should return full news article on GET news by id`() {
+        // Given
+        val fakeArticle = com.united.model.NewsItem(
+            id = "news-1",
+            title = "Wielkie zwycięstwo!",
+            slug = "wielkie-zwyciestwo",
+            mainPhotoUrl = "https://cdn.example.com/news/news-1/main.jpg",
+            excerpt = "Świetny mecz przed własną publicznością.",
+            contentHtml = "<p>Pełna relacja z niesamowitego meczu.</p>",
+            galleryPhotos = listOf("https://cdn.example.com/news/news-1/photo1.jpg"),
+            createdAt = "2026-03-10T18:00:00Z",
+            published = true,
+            isDeleted = false
+        )
+        coEvery { mockRepository.getNewsById("news-1") } returns fakeArticle
+
+        val request = ApiRequest().apply {
+            rawPath = "/news/news-1"
+        }
+
+        // When
+        val response = handler.handleRequest(request, null)
+
+        // Then
+        assertEquals(200, response.statusCode)
+        assert(response.body.contains("<p>Pełna relacja z niesamowitego meczu.</p>"))
+        assert(response.body.contains("photo1.jpg"))
+    }
+
+    @Test
+    fun `should return 404 when news article does not exist or was soft deleted`() {
+        // Given
+        coEvery { mockRepository.getNewsById("deleted-or-missing") } returns null
+
+        val request = ApiRequest().apply {
+            rawPath = "/news/deleted-or-missing"
+        }
+
+        // When
+        val response = handler.handleRequest(request, null)
+
+        // Then
+        assertEquals(404, response.statusCode)
+        assert(response.body.contains("News article not found"))
+    }
+
+    @Test
+    fun `should return presigned upload url on POST admin news upload-url`() {
+        // Given
+        val fakeResponse = GenerateUploadUrlResponse(
+            uploadUrl = "https://s3.example.com/assets/news/derby/main/photo.jpg?signature=123",
+            cdnUrl = "https://cdn.example.com/news/derby/main/photo.jpg",
+            key = "assets/news/derby/main/photo.jpg"
+        )
+        coEvery { mockS3Service.generatePresignedUploadUrl(any()) } returns fakeResponse
+
+        val request = ApiRequest().apply {
+            rawPath = "/admin/news/upload-url"
+            httpMethod = "POST"
+            body = """{"newsId":"derby","fileName":"team.jpg","contentType":"image/jpeg","isGallery":false}"""
+        }
+
+        // When
+        val response = handler.handleRequest(request, null)
+
+        // Then
+        assertEquals(200, response.statusCode)
+        assert(response.body.contains("https://s3.example.com"))
+        assert(response.body.contains("https://cdn.example.com/news/derby/main/photo.jpg"))
+    }
+
+    @Test
+    fun `should return 400 when upload-url request is missing required fields`() {
+        val request = ApiRequest().apply {
+            rawPath = "/admin/news/upload-url"
+            httpMethod = "POST"
+            body = """{"newsId":"","fileName":"","contentType":""}"""
+        }
+
+        val response = handler.handleRequest(request, null)
+
+        assertEquals(400, response.statusCode)
+        assert(response.body.contains("required"))
+    }
+
+    @Test
+    fun `should return 400 when upload-url content-type is not an image`() {
+        val request = ApiRequest().apply {
+            rawPath = "/admin/news/upload-url"
+            httpMethod = "POST"
+            body = """{"newsId":"derby","fileName":"file.pdf","contentType":"application/pdf"}"""
+        }
+
+        val response = handler.handleRequest(request, null)
+
+        assertEquals(400, response.statusCode)
+        assert(response.body.contains("Only image uploads are permitted"))
+    }
+
+    @Test
+    fun `should return all news on GET admin news`() {
+        val fakeNews = listOf(
+            com.united.model.NewsSummary("1", "Draft Article", "draft-article", "https://cdn.example.com/main.jpg", "Excerpt", "2026-03-11T10:00:00Z", published = false)
+        )
+        coEvery { mockRepository.getNews(includeUnpublished = true, includeDeleted = true) } returns fakeNews
+
+        val request = ApiRequest().apply {
+            rawPath = "/admin/news"
+            httpMethod = "GET"
+        }
+
+        val response = handler.handleRequest(request, null)
+
+        assertEquals(200, response.statusCode)
+        assert(response.body.contains("Draft Article"))
+    }
+
+    @Test
+    fun `should create news article on POST admin news`() {
+        coEvery { mockRepository.saveNews(any()) } returns Unit
+
+        val request = ApiRequest().apply {
+            rawPath = "/admin/news"
+            httpMethod = "POST"
+            body = """{"title":"Zwycięstwo United!","mainPhotoUrl":"https://cdn.example.com/photo.jpg","contentHtml":"<p>Relacja z meczu</p>"}"""
+        }
+
+        val response = handler.handleRequest(request, null)
+
+        assertEquals(201, response.statusCode)
+        assert(response.body.contains("Zwycięstwo United!"))
+        assert(response.body.contains("zwyciestwo-united"))
+    }
+
+    @Test
+    fun `should return 400 on POST admin news when title or mainPhotoUrl is missing`() {
+        val request = ApiRequest().apply {
+            rawPath = "/admin/news"
+            httpMethod = "POST"
+            body = """{"title":"","mainPhotoUrl":""}"""
+        }
+
+        val response = handler.handleRequest(request, null)
+
+        assertEquals(400, response.statusCode)
+        assert(response.body.contains("mandatory"))
+    }
+
+    @Test
+    fun `should update news article on PUT admin news by id`() {
+        val existing = com.united.model.NewsItem(
+            id = "test-id",
+            title = "Stary tytuł",
+            slug = "stary-tytul",
+            mainPhotoUrl = "https://cdn.example.com/old.jpg",
+            excerpt = "Stary excerpt",
+            contentHtml = "<p>Stara treść</p>",
+            createdAt = "2026-03-10T12:00:00Z"
+        )
+        coEvery { mockRepository.getNewsById("test-id", includeDeleted = true) } returns existing
+        coEvery { mockRepository.saveNews(any()) } returns Unit
+
+        val request = ApiRequest().apply {
+            rawPath = "/admin/news/test-id"
+            httpMethod = "PUT"
+            body = """{"title":"Nowy tytuł","contentHtml":"<p>Nowa treść</p>"}"""
+        }
+
+        val response = handler.handleRequest(request, null)
+
+        assertEquals(200, response.statusCode)
+        assert(response.body.contains("Nowy tytuł"))
+        assert(response.body.contains("nowy-tytul"))
+    }
+
+    @Test
+    fun `should soft delete news article on DELETE admin news by id`() {
+        coEvery { mockRepository.softDeleteNews("test-id") } returns true
+
+        val request = ApiRequest().apply {
+            rawPath = "/admin/news/test-id"
+            httpMethod = "DELETE"
+        }
+
+        val response = handler.handleRequest(request, null)
+
+        assertEquals(200, response.statusCode)
+        assert(response.body.contains("soft-deleted successfully"))
     }
 }

@@ -4,4 +4,9 @@ export const environment = {
   apiUrl: 'http://localhost:8080',
   cdnUrl: 'https://d1rm5h55nlqrob.cloudfront.net',
   unitedTeamName: 'United_Środa_Śląska',
+  cognito: {
+    region: 'eu-central-1',
+    userPoolId: '',
+    clientId: '',
+  },
 };

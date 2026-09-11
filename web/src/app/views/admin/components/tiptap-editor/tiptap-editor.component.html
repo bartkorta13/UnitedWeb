@@ -1,0 +1,134 @@
+<div class="tiptap-editor-wrapper">
+  <!-- Toolbar -->
+  <div class="tiptap-toolbar" role="toolbar" aria-label="Formatowanie tekstu">
+    <button
+      type="button"
+      class="toolbar-btn"
+      [class.is-active]="isBoldActive()"
+      (click)="toggleBold()"
+      title="Pogrubienie (Ctrl+B)"
+    >
+      <strong>B</strong>
+    </button>
+
+    <button
+      type="button"
+      class="toolbar-btn"
+      [class.is-active]="isItalicActive()"
+      (click)="toggleItalic()"
+      title="Kursywa (Ctrl+I)"
+    >
+      <em>I</em>
+    </button>
+
+    <div class="toolbar-divider"></div>
+
+    <button
+      type="button"
+      class="toolbar-btn"
+      [class.is-active]="isH2Active()"
+      (click)="toggleH2()"
+      title="Nagłówek 2 (Główny sekcji)"
+    >
+      H2
+    </button>
+
+    <button
+      type="button"
+      class="toolbar-btn"
+      [class.is-active]="isH3Active()"
+      (click)="toggleH3()"
+      title="Nagłówek 3 (Podsekcja)"
+    >
+      H3
+    </button>
+
+    <div class="toolbar-divider"></div>
+
+    <button
+      type="button"
+      class="toolbar-btn"
+      [class.is-active]="isBulletListActive()"
+      (click)="toggleBulletList()"
+      title="Lista punktowana"
+    >
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+        <path d="M4 6h2v2H4zm0 5h2v2H4zm0 5h2v2H4zm5-10h12v2H9zm0 5h12v2H9zm0 5h12v2H9z" />
+      </svg>
+    </button>
+
+    <button
+      type="button"
+      class="toolbar-btn"
+      [class.is-active]="isOrderedListActive()"
+      (click)="toggleOrderedList()"
+      title="Lista numerowana"
+    >
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+        <path d="M4 7h1v1H4V7zm0 5h1.5v.5H5v.5h1v1H4v-2zm0 5h1.7v1H4.5v.5h1.2v.5H4v-2zm4-10h13v2H8zm0 5h13v2H8zm0 5h13v2H8z" />
+      </svg>
+    </button>
+
+    <button
+      type="button"
+      class="toolbar-btn"
+      [class.is-active]="isBlockquoteActive()"
+      (click)="toggleBlockquote()"
+      title="Cytat / Wyróżnienie"
+    >
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+        <path d="M6 17h3l2-4V7H5v6h3zm8 0h3l2-4V7h-6v6h3z" />
+      </svg>
+    </button>
+
+    <button
+      type="button"
+      class="toolbar-btn"
+      (click)="setHorizontalRule()"
+      title="Linia podziału"
+    >
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+        <path d="M4 11h16v2H4z" />
+      </svg>
+    </button>
+
+    <button
+      type="button"
+      class="toolbar-btn"
+      [class.is-active]="isLinkActive()"
+      (click)="setLink()"
+      title="Dodaj lub edytuj link"
+    >
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+        <path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z" />
+      </svg>
+    </button>
+
+    <div class="toolbar-spacer"></div>
+
+    <button
+      type="button"
+      class="toolbar-btn"
+      (click)="undo()"
+      title="Cofnij (Ctrl+Z)"
+    >
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+        <path d="M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z" />
+      </svg>
+    </button>
+
+    <button
+      type="button"
+      class="toolbar-btn"
+      (click)="redo()"
+      title="Ponów (Ctrl+Y)"
+    >
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+        <path d="M18.4 10.6C16.55 8.99 14.15 8 11.5 8c-4.65 0-8.58 3.03-9.96 7.22L3.9 16c1.05-3.19 4.05-5.5 7.6-5.5 1.95 0 3.73.72 5.12 1.88L13 16h9V7l-3.6 3.6z" />
+      </svg>
+    </button>
+  </div>
+
+  <!-- Editable prose content area -->
+  <div #editorContainer class="tiptap-content-container"></div>
+</div>
