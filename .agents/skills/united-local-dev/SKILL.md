@@ -11,12 +11,23 @@ description: >-
 This skill guides running both the backend API and frontend Angular app locally.
 
 ## Port Map
-- **Backend API**: `http://localhost:8080` (Kotlin `LocalServer`)
 - **Frontend App**: `http://localhost:4200` (Angular Dev Server)
+- **Backend API**: `http://localhost:8080` (Kotlin `LocalServer`)
+- **DynamoDB Local**: `http://localhost:8000` (In-memory DynamoDB)
 
 ---
 
-## 1. Start Backend API (`core-service`)
+## 1. Local Database (`DynamoDB Local`)
+
+Local development never connects to AWS DynamoDB production.
+You can run DynamoDB Local in any of these ways:
+- **Automatic (zero-config)**: Simply run `./gradlew :core-service:run`. `LocalServer` detects if port 8000 is open; if not, it automatically spawns an embedded DynamoDB Local process and auto-seeds roster, standings, and news!
+- **Docker**: `docker compose up -d` (uses official `amazon/dynamodb-local:latest`).
+- **Standalone Gradle**: `./gradlew :core-service:startDynamoDbLocal`.
+
+---
+
+## 2. Start Backend API (`core-service`)
 
 In the root of the project:
 ```bash

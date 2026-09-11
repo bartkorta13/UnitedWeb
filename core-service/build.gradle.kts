@@ -1,3 +1,6 @@
+import java.net.URI
+import java.io.File
+
 plugins {
     kotlin("jvm")
     id("com.gradleup.shadow") version "9.6.1"
@@ -59,4 +62,44 @@ tasks.register<Test>("seedRoster") {
     filter {
         includeTestsMatching("com.united.seed.SeedRosterTest")
     }
+}
+
+tasks.register("downloadDynamoDbLocal") {
+    group = "development"
+    description = "Downloads AWS DynamoDB Local to .dynamodb/ if not already present"
+    doLast {
+        val destDir = rootProject.file(".dynamodb")
+        val jarFile = file("$destDir/DynamoDBLocal.jar")
+        if (jarFile.exists()) {
+            println("DynamoDB Local is already installed in ${destDir.path}")
+            return@doLast
+        }
+        destDir.mkdirs()
+        println("Downloading DynamoDB Local from AWS Frankfurt...")
+        val tarUrl = URI("https://s3.eu-central-1.amazonaws.com/dynamodb-local-frankfurt/dynamodb_local_latest.tar.gz").toURL()
+        val tempFile = File.createTempFile("dynamodb_local", ".tar.gz")
+        tarUrl.openStream().use { input: java.io.InputStream ->
+            tempFile.outputStream().use { output: java.io.OutputStream ->
+                input.copyTo(output)
+            }
+        }
+        println("Extracting DynamoDB Local to ${destDir.path}...")
+        ProcessBuilder("tar", "-xzf", tempFile.absolutePath, "-C", destDir.absolutePath)
+            .inheritIO()
+            .start()
+            .waitFor()
+        tempFile.delete()
+        println("DynamoDB Local download and setup complete!")
+    }
+}
+
+tasks.register<JavaExec>("startDynamoDbLocal") {
+    group = "development"
+    description = "Runs AWS DynamoDB Local standalone on port 8000"
+    dependsOn("downloadDynamoDbLocal")
+    val destDir = rootProject.file(".dynamodb")
+    classpath = files("$destDir/DynamoDBLocal.jar")
+    mainClass.set("com.amazonaws.services.dynamodbv2.local.main.ServerRunner")
+    args = listOf("-inMemory", "-port", "8000")
+    systemProperty("java.library.path", "$destDir/DynamoDBLocal_lib")
 }

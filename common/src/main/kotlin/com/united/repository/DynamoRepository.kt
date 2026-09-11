@@ -1,15 +1,25 @@
 package com.united.repository
 
+import aws.sdk.kotlin.runtime.auth.credentials.StaticCredentialsProvider
 import aws.sdk.kotlin.services.dynamodb.DynamoDbClient
+import aws.sdk.kotlin.services.dynamodb.model.AttributeDefinition
 import aws.sdk.kotlin.services.dynamodb.model.AttributeValue
 import aws.sdk.kotlin.services.dynamodb.model.BatchWriteItemRequest
+import aws.sdk.kotlin.services.dynamodb.model.BillingMode
+import aws.sdk.kotlin.services.dynamodb.model.CreateTableRequest
 import aws.sdk.kotlin.services.dynamodb.model.DeleteRequest
+import aws.sdk.kotlin.services.dynamodb.model.DescribeTableRequest
 import aws.sdk.kotlin.services.dynamodb.model.GetItemRequest
+import aws.sdk.kotlin.services.dynamodb.model.KeySchemaElement
+import aws.sdk.kotlin.services.dynamodb.model.KeyType
 import aws.sdk.kotlin.services.dynamodb.model.PutItemRequest
 import aws.sdk.kotlin.services.dynamodb.model.PutRequest
 import aws.sdk.kotlin.services.dynamodb.model.QueryRequest
+import aws.sdk.kotlin.services.dynamodb.model.ScalarAttributeType
 import aws.sdk.kotlin.services.dynamodb.model.UpdateItemRequest
 import aws.sdk.kotlin.services.dynamodb.model.WriteRequest
+import aws.smithy.kotlin.runtime.auth.awscredentials.Credentials
+import aws.smithy.kotlin.runtime.net.url.Url
 import com.united.model.MatchItem
 import com.united.model.NewsItem
 import com.united.model.NewsSummary
@@ -22,8 +32,65 @@ import java.time.Instant
 import kotlin.time.Duration.Companion.milliseconds
 
 class DynamoRepository(
-    private val tableName: String = "LeagueData"
+    private val tableName: String = System.getenv("DYNAMODB_TABLE") ?: System.getProperty("DYNAMODB_TABLE") ?: "LeagueData",
+    private val endpointUrl: String? = null
 ) {
+
+    private suspend fun createClient(): DynamoDbClient {
+        val endpoint = endpointUrl ?: System.getenv("DYNAMODB_ENDPOINT") ?: System.getProperty("DYNAMODB_ENDPOINT")
+        return if (!endpoint.isNullOrBlank()) {
+            DynamoDbClient {
+                this.endpointUrl = Url.parse(endpoint)
+                this.region = "eu-central-1"
+                this.credentialsProvider = StaticCredentialsProvider(Credentials("dummyAccessKey", "dummySecretKey"))
+            }
+        } else {
+            DynamoDbClient.fromEnvironment()
+        }
+    }
+
+    /**
+     * Checks if the target DynamoDB table exists; if not, creates it with PK (Hash) and SK (Range).
+     * Particularly useful for initializing local DynamoDB instances automatically.
+     */
+    suspend fun ensureTableExists() {
+        createClient().use { ddb ->
+            val exists = try {
+                ddb.describeTable(DescribeTableRequest { tableName = this@DynamoRepository.tableName })
+                true
+            } catch (_: Exception) {
+                false
+            }
+
+            if (!exists) {
+                ddb.createTable(CreateTableRequest {
+                    tableName = this@DynamoRepository.tableName
+                    attributeDefinitions = listOf(
+                        AttributeDefinition {
+                            attributeName = "PK"
+                            attributeType = ScalarAttributeType.S
+                        },
+                        AttributeDefinition {
+                            attributeName = "SK"
+                            attributeType = ScalarAttributeType.S
+                        }
+                    )
+                    keySchema = listOf(
+                        KeySchemaElement {
+                            attributeName = "PK"
+                            keyType = KeyType.Hash
+                        },
+                        KeySchemaElement {
+                            attributeName = "SK"
+                            keyType = KeyType.Range
+                        }
+                    )
+                    billingMode = BillingMode.PayPerRequest
+                })
+            }
+        }
+    }
+
 
     /**
      * Saves or overwrites all team standings in DynamoDB table 'LeagueData'.
@@ -85,7 +152,7 @@ class DynamoRepository(
     private suspend fun executeBatchWrite(requests: List<WriteRequest>) {
         if (requests.isEmpty()) return
 
-        DynamoDbClient.fromEnvironment().use { ddb ->
+        createClient().use { ddb ->
             // Chunk into batches of 5 to respect our 5 WCU Free Tier limit
             requests.chunked(5).forEach { chunk ->
                 val request = BatchWriteItemRequest {
@@ -103,7 +170,7 @@ class DynamoRepository(
      * Fetches all team standings from DynamoDB.
      */
     suspend fun getStandings(): List<TeamStanding> {
-        DynamoDbClient.fromEnvironment().use { ddb ->
+        createClient().use { ddb ->
             val request = QueryRequest {
                 tableName = this@DynamoRepository.tableName
                 keyConditionExpression = "PK = :pk"
@@ -137,7 +204,7 @@ class DynamoRepository(
      * Fetches all matches from DynamoDB.
      */
     suspend fun getMatches(): List<MatchItem> {
-        DynamoDbClient.fromEnvironment().use { ddb ->
+        createClient().use { ddb ->
             val request = QueryRequest {
                 tableName = this@DynamoRepository.tableName
                 keyConditionExpression = "PK = :pk"
@@ -219,7 +286,7 @@ class DynamoRepository(
      * Fetches all roster members from DynamoDB, sorted by position order and jersey number.
      */
     suspend fun getRoster(): List<PlayerItem> {
-        DynamoDbClient.fromEnvironment().use { ddb ->
+        createClient().use { ddb ->
             val request = QueryRequest {
                 tableName = this@DynamoRepository.tableName
                 keyConditionExpression = "PK = :pk"
@@ -260,7 +327,7 @@ class DynamoRepository(
      * Saves or updates a news article in DynamoDB table 'LeagueData'.
      */
     suspend fun saveNews(news: NewsItem) {
-        DynamoDbClient.fromEnvironment().use { ddb ->
+        createClient().use { ddb ->
             val item = mutableMapOf(
                 "PK" to AttributeValue.S("NEWS"),
                 "SK" to AttributeValue.S("ARTICLE#${news.id}"),
@@ -299,7 +366,7 @@ class DynamoRepository(
         includeUnpublished: Boolean = false,
         includeDeleted: Boolean = false
     ): List<NewsSummary> {
-        DynamoDbClient.fromEnvironment().use { ddb ->
+        createClient().use { ddb ->
             val request = QueryRequest {
                 tableName = this@DynamoRepository.tableName
                 keyConditionExpression = "PK = :pk"
@@ -346,7 +413,7 @@ class DynamoRepository(
      * Returns null if the article does not exist or has been soft-deleted (unless includeDeleted = true).
      */
     suspend fun getNewsById(id: String, includeDeleted: Boolean = false): NewsItem? {
-        DynamoDbClient.fromEnvironment().use { ddb ->
+        createClient().use { ddb ->
             val request = GetItemRequest {
                 tableName = this@DynamoRepository.tableName
                 key = mapOf(
@@ -387,7 +454,7 @@ class DynamoRepository(
      * Permanent hard deletes can only be performed manually via the AWS Console or explicit admin script.
      */
     suspend fun softDeleteNews(id: String): Boolean {
-        DynamoDbClient.fromEnvironment().use { ddb ->
+        createClient().use { ddb ->
             val now = Instant.now().toString()
             val request = UpdateItemRequest {
                 tableName = this@DynamoRepository.tableName

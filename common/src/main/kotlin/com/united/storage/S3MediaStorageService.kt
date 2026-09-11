@@ -1,17 +1,35 @@
 package com.united.storage
 
+import aws.sdk.kotlin.runtime.auth.credentials.StaticCredentialsProvider
 import aws.sdk.kotlin.services.s3.S3Client
 import aws.sdk.kotlin.services.s3.model.PutObjectRequest
 import aws.sdk.kotlin.services.s3.presigners.presignPutObject
+import aws.smithy.kotlin.runtime.auth.awscredentials.Credentials
+import aws.smithy.kotlin.runtime.net.url.Url
 import com.united.model.GenerateUploadUrlRequest
 import com.united.model.GenerateUploadUrlResponse
 import java.util.UUID
 import kotlin.time.Duration.Companion.minutes
 
 class S3MediaStorageService(
-    private val bucketName: String = System.getenv("ASSETS_S3_BUCKET") ?: "united-league-assets",
-    private val cdnBaseUrl: String = System.getenv("ASSETS_CDN_URL") ?: "https://d1rm5h55nlqrob.cloudfront.net"
+    private val bucketName: String = System.getenv("ASSETS_S3_BUCKET") ?: System.getProperty("ASSETS_S3_BUCKET") ?: "united-league-assets",
+    private val cdnBaseUrl: String = System.getenv("ASSETS_CDN_URL") ?: System.getProperty("ASSETS_CDN_URL") ?: "https://d1rm5h55nlqrob.cloudfront.net",
+    private val endpointUrl: String? = System.getenv("S3_ENDPOINT") ?: System.getProperty("S3_ENDPOINT")
 ) {
+
+    private suspend fun createClient(): S3Client {
+        val endpoint = endpointUrl ?: System.getenv("S3_ENDPOINT") ?: System.getProperty("S3_ENDPOINT")
+        return if (!endpoint.isNullOrBlank()) {
+            S3Client {
+                this.endpointUrl = Url.parse(endpoint)
+                this.region = "eu-central-1"
+                this.forcePathStyle = true
+                this.credentialsProvider = StaticCredentialsProvider(Credentials("dummyAccessKey", "dummySecretKey"))
+            }
+        } else {
+            S3Client.fromEnvironment()
+        }
+    }
 
     /**
      * Generates an AWS S3 Pre-signed URL allowing the client (browser) to upload
@@ -35,7 +53,7 @@ class S3MediaStorageService(
             contentType = request.contentType
         }
 
-        val presignedUrl = S3Client.fromEnvironment().use { s3 ->
+        val presignedUrl = createClient().use { s3 ->
             val presigned = s3.presignPutObject(putRequest, 15.minutes)
             presigned.url.toString()
         }

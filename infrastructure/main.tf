@@ -2,6 +2,37 @@ provider "aws" {
   region = "eu-central-1"
 }
 
+# 0. DynamoDB Table: Production League Data (Protected & Point-in-Time Recovery)
+resource "aws_dynamodb_table" "league_data" {
+  name           = "LeagueData"
+  billing_mode   = "PROVISIONED"
+  read_capacity  = 1
+  write_capacity = 1
+  hash_key       = "PK"
+  range_key      = "SK"
+
+  attribute {
+    name = "PK"
+    type = "S"
+  }
+
+  attribute {
+    name = "SK"
+    type = "S"
+  }
+
+  point_in_time_recovery {
+    enabled = true
+  }
+
+  deletion_protection_enabled = true
+
+  tags = {
+    Project     = "UnitedWeb"
+    Environment = "production"
+  }
+}
+
 # 1. IAM Role: Allows Lambda to run and access DynamoDB
 resource "aws_iam_role" "lambda_exec" {
   name = "united_api_lambda_role"
@@ -21,7 +52,7 @@ resource "aws_iam_role_policy_attachment" "lambda_logs" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
-# Attach DynamoDB Read & Write permissions
+# Attach DynamoDB Read & Write permissions (Restricted to LeagueData table only)
 resource "aws_iam_role_policy" "dynamodb_access" {
   name = "dynamodb_access"
   role = aws_iam_role.lambda_exec.id
@@ -37,7 +68,10 @@ resource "aws_iam_role_policy" "dynamodb_access" {
         "dynamodb:UpdateItem",
         "dynamodb:BatchWriteItem"
       ]
-      Resource = "*"
+      Resource = [
+        aws_dynamodb_table.league_data.arn,
+        "${aws_dynamodb_table.league_data.arn}/index/*"
+      ]
     }]
   })
 }
@@ -51,7 +85,10 @@ resource "aws_iam_role_policy" "s3_upload_policy" {
     Statement = [{
       Effect   = "Allow"
       Action   = ["s3:PutObject"]
-      Resource = "${aws_s3_bucket.assets.arn}/*"
+      Resource = [
+        "${aws_s3_bucket.assets.arn}/*",
+        "${aws_s3_bucket.dev_assets.arn}/*"
+      ]
     }]
   })
 }
@@ -453,6 +490,107 @@ resource "aws_s3_bucket_policy" "assets_oac_policy" {
 }
 
 # ------------------------------------------------------------------------------
+# 12b. Dev Assets S3 Bucket & CloudFront CDN (Option A: Dedicated Development S3)
+# ------------------------------------------------------------------------------
+resource "aws_s3_bucket" "dev_assets" {
+  bucket_prefix = "united-league-assets-dev-"
+  force_destroy = true
+
+  tags = {
+    Project     = "UnitedWeb"
+    Environment = "development"
+  }
+}
+
+# Block all direct public access
+resource "aws_s3_bucket_public_access_block" "dev_assets_access" {
+  bucket = aws_s3_bucket.dev_assets.id
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+# Allow direct browser uploads from local dev (http://localhost:4200)
+resource "aws_s3_bucket_cors_configuration" "dev_assets_cors" {
+  bucket = aws_s3_bucket.dev_assets.id
+
+  cors_rule {
+    allowed_headers = ["*"]
+    allowed_methods = ["PUT", "GET", "HEAD"]
+    allowed_origins = [
+      "http://localhost:4200",
+      "http://localhost:8080"
+    ]
+    expose_headers  = ["ETag"]
+    max_age_seconds = 3000
+  }
+}
+
+resource "aws_cloudfront_distribution" "dev_assets_cdn" {
+  enabled             = true
+  is_ipv6_enabled     = true
+  comment             = "CloudFront CDN for United Dev Assets"
+  price_class         = "PriceClass_100"
+
+  origin {
+    domain_name              = aws_s3_bucket.dev_assets.bucket_regional_domain_name
+    origin_id                = "S3-${aws_s3_bucket.dev_assets.id}"
+    origin_access_control_id = aws_cloudfront_origin_access_control.assets_oac.id
+    origin_path              = "/assets"
+  }
+
+  default_cache_behavior {
+    target_origin_id       = "S3-${aws_s3_bucket.dev_assets.id}"
+    viewer_protocol_policy = "redirect-to-https"
+    allowed_methods        = ["GET", "HEAD", "OPTIONS"]
+    cached_methods         = ["GET", "HEAD"]
+    cache_policy_id        = data.aws_cloudfront_cache_policy.caching_optimized.id
+    compress               = true
+  }
+
+  restrictions {
+    geo_restriction {
+      restriction_type = "none"
+    }
+  }
+
+  viewer_certificate {
+    cloudfront_default_certificate = true
+  }
+
+  tags = {
+    Project     = "UnitedWeb"
+    Environment = "development"
+  }
+}
+
+resource "aws_s3_bucket_policy" "dev_assets_oac_policy" {
+  bucket = aws_s3_bucket.dev_assets.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid       = "AllowCloudFrontDevReadOnly"
+        Effect    = "Allow"
+        Principal = {
+          Service = "cloudfront.amazonaws.com"
+        }
+        Action   = "s3:GetObject"
+        Resource = "${aws_s3_bucket.dev_assets.arn}/*"
+        Condition = {
+          StringEquals = {
+            "AWS:SourceArn" = aws_cloudfront_distribution.dev_assets_cdn.arn
+          }
+        }
+      }
+    ]
+  })
+}
+
+# ------------------------------------------------------------------------------
 # 13. Outputs
 # ------------------------------------------------------------------------------
 output "storage_bucket_name" {
@@ -473,6 +611,21 @@ output "frontend_cdn_url" {
 output "assets_cdn_url" {
   description = "CloudFront CDN Base URL for media assets (photos & logos)"
   value       = "https://${aws_cloudfront_distribution.assets_cdn.domain_name}"
+}
+
+output "dev_assets_bucket_name" {
+  description = "Dedicated S3 bucket for development/testing assets"
+  value       = aws_s3_bucket.dev_assets.id
+}
+
+output "dev_assets_cdn_url" {
+  description = "CloudFront CDN Base URL for development media assets"
+  value       = "https://${aws_cloudfront_distribution.dev_assets_cdn.domain_name}"
+}
+
+output "dynamodb_table_arn" {
+  description = "ARN of the production LeagueData DynamoDB table"
+  value       = aws_dynamodb_table.league_data.arn
 }
 
 output "frontend_distribution_id" {

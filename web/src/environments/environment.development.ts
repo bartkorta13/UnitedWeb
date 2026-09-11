@@ -6,7 +6,7 @@ export const environment = {
   unitedTeamName: 'United_Środa_Śląska',
   cognito: {
     region: 'eu-central-1',
-    userPoolId: '',
-    clientId: '',
+    userPoolId: 'eu-central-1_Jv4bpcATR',
+    clientId: '52ch3185gka9g4vr3p7bfijh0u',
   },
 };

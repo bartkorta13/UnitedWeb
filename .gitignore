@@ -51,3 +51,7 @@ bin/
 
 ### Local Seed Data ###
 roster_seed.json
+
+### DynamoDB Local ###
+.dynamodb/
+*dynamodb-local-metadata.json
