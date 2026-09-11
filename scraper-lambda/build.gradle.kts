@@ -1,10 +1,15 @@
 plugins {
     kotlin("jvm")
     id("com.gradleup.shadow") version "9.6.1"
+    application
 }
 
 group = "com.united"
 version = "1.0-SNAPSHOT"
+
+application {
+    mainClass.set("com.united.LocalScraperKt")
+}
 
 dependencies {
 
