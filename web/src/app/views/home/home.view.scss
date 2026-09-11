@@ -2442,6 +2442,346 @@
     }
   }
 }
+
+/* ==========================================================================
+   ABOUT CLUB SECTION (Progressive 25' -> 26' -> 27' Timeline Flow)
+   ========================================================================== */
+.section-club {
+  background: #000000;
+  border-top: 1px solid rgba(22, 78, 32, 0.3);
+  position: relative;
+  overflow: hidden;
+  padding: clamp(3.5rem, 7vw, 6rem) 0;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 30%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 900px;
+    height: 500px;
+    background: radial-gradient(ellipse, rgba(0, 230, 91, 0.04) 0%, rgba(22, 78, 32, 0.03) 40%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+}
+
+.club-timeline-flow {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1.25rem;
+  width: 100%;
+
+  @media (max-width: 991px) {
+    flex-direction: column;
+    align-items: center;
+    gap: 1.25rem;
+    max-width: 560px;
+    margin: 0 auto;
+  }
+}
+
+/* Individual Timeline Cards - Progressively larger in height, padding, font & visual presence */
+.timeline-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--radius-lg, 20px);
+  overflow: hidden;
+  transition: transform 0.3s cubic-bezier(0.2, 0, 0, 1),
+              border-color 0.25s ease,
+              box-shadow 0.3s ease;
+
+  /* Card 1: 25' (Początki - Baseline compact) */
+  &.step-25 {
+    flex: 0.92 1 0;
+    min-width: 0;
+    min-height: 420px;
+    padding: clamp(1.8rem, 2.4vw, 2.2rem);
+    border: 1px solid rgba(22, 78, 32, 0.5);
+    background: linear-gradient(175deg, rgba(11, 20, 13, 0.85) 0%, rgba(6, 12, 8, 0.95) 100%);
+
+    .timeline-year-watermark {
+      font-size: clamp(5.6rem, 6.6vw, 7.2rem);
+      color: rgba(22, 78, 32, 0.38);
+      text-shadow: 0 0 18px rgba(0, 230, 91, 0.08);
+    }
+
+    &:hover {
+      transform: translateY(-6px);
+      border-color: rgba(0, 230, 91, 0.45);
+      box-shadow: 0 16px 36px rgba(0, 0, 0, 0.7), 0 0 20px rgba(0, 230, 91, 0.1);
+
+      .timeline-year-watermark {
+        color: rgba(0, 230, 91, 0.3);
+        transform: scale(1.05);
+      }
+    }
+  }
+
+  /* Card 2: 26' (Teraźniejszość - Medium / Active distinct stage) */
+  &.step-26 {
+    flex: 1.04 1 0;
+    min-width: 0;
+    min-height: 460px;
+    padding: clamp(2.1rem, 2.8vw, 2.6rem);
+    border: 1.5px solid rgba(0, 230, 91, 0.45);
+    background: linear-gradient(175deg, rgba(13, 26, 17, 0.9) 0%, rgba(7, 15, 9, 0.96) 100%);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), 0 0 20px rgba(0, 230, 91, 0.08);
+
+    .timeline-year-watermark {
+      font-size: clamp(6.8rem, 8vw, 8.6rem);
+      color: rgba(0, 230, 91, 0.22);
+      text-shadow: 0 0 25px rgba(0, 230, 91, 0.16);
+    }
+
+    &:hover {
+      transform: translateY(-8px);
+      border-color: rgba(0, 230, 91, 0.7);
+      box-shadow: 0 20px 45px rgba(0, 0, 0, 0.75), 0 0 28px rgba(0, 230, 91, 0.22);
+
+      .timeline-year-watermark {
+        color: rgba(0, 230, 91, 0.38);
+        transform: scale(1.06);
+      }
+    }
+  }
+
+  /* Card 3: 27' (Przyszłość - Largest / Hero presence with full neon glow) */
+  &.step-27 {
+    flex: 1.18 1 0;
+    min-width: 0;
+    min-height: 500px;
+    padding: clamp(2.4rem, 3.4vw, 3rem);
+    border: 2px solid rgba(0, 230, 91, 0.75);
+    background: linear-gradient(175deg, rgba(16, 36, 20, 0.95) 0%, rgba(8, 20, 11, 0.98) 100%);
+    box-shadow: 0 16px 45px rgba(0, 0, 0, 0.65), 0 0 35px rgba(0, 230, 91, 0.2);
+
+    .timeline-year-watermark {
+      font-size: clamp(8.2rem, 9.5vw, 10.2rem);
+      color: rgba(0, 230, 91, 0.3);
+      text-shadow: 0 0 35px rgba(0, 230, 91, 0.28);
+    }
+
+    &:hover {
+      transform: translateY(-10px);
+      border-color: var(--color-accent-neon);
+      box-shadow: 0 24px 55px rgba(0, 0, 0, 0.8), 0 0 45px rgba(0, 230, 91, 0.35);
+
+      .timeline-year-watermark {
+        color: rgba(0, 230, 91, 0.48);
+        transform: scale(1.07);
+      }
+    }
+  }
+
+  @media (max-width: 991px) {
+    &.step-25,
+    &.step-26,
+    &.step-27 {
+      width: 100%;
+      max-width: 540px;
+      min-height: auto;
+      flex: none;
+    }
+  }
+
+  /* Giant athletic watermark with the year (25', 26', 27') - styled identically to player jersey numbers */
+  .timeline-year-watermark {
+    position: absolute;
+    top: -4px;
+    right: 14px;
+    font-family: var(--font-display);
+    font-weight: 900;
+    line-height: 0.82;
+    letter-spacing: -0.04em;
+    pointer-events: none;
+    user-select: none;
+    z-index: 1;
+    transform-origin: top right;
+    transition: color 0.3s ease, transform 0.35s cubic-bezier(0.2, 0, 0, 1), text-shadow 0.3s ease;
+  }
+
+  .timeline-card-inner {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+  }
+
+  .timeline-card-header {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .timeline-badge {
+    align-self: flex-start;
+    font-family: var(--font-display);
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 0.3rem 0.8rem;
+    border-radius: var(--radius-pill);
+    background: rgba(16, 36, 20, 0.65);
+    color: rgba(255, 255, 255, 0.85);
+    border: 1px solid rgba(22, 78, 32, 0.65);
+
+    &.badge-current {
+      background: rgba(0, 230, 91, 0.15);
+      color: var(--color-accent-neon);
+      border-color: rgba(0, 230, 91, 0.55);
+      box-shadow: 0 0 12px rgba(0, 230, 91, 0.2);
+    }
+
+    &.badge-future {
+      background: linear-gradient(135deg, rgba(0, 230, 91, 0.25) 0%, rgba(22, 78, 32, 0.6) 100%);
+      color: #ffffff;
+      border-color: var(--color-accent-neon);
+      box-shadow: 0 0 16px rgba(0, 230, 91, 0.3);
+    }
+  }
+
+  .timeline-title {
+    font-family: var(--font-display);
+    font-weight: 800;
+    color: #ffffff;
+    margin: 0;
+    letter-spacing: -0.01em;
+  }
+
+  &.step-25 .timeline-title {
+    font-size: clamp(1.3rem, 1.6vw, 1.5rem);
+  }
+
+  &.step-26 .timeline-title {
+    font-size: clamp(1.45rem, 1.8vw, 1.7rem);
+  }
+
+  &.step-27 .timeline-title {
+    font-size: clamp(1.6rem, 2.1vw, 1.95rem);
+  }
+
+  .timeline-card-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+  }
+
+  .timeline-desc {
+    color: var(--color-text-dim, #cbd5e1);
+    font-size: 0.94rem;
+    line-height: 1.65;
+    margin: 0;
+  }
+
+  .timeline-desc-extra {
+    color: rgba(255, 255, 255, 0.78);
+    font-size: 0.91rem;
+    line-height: 1.6;
+    margin: 0;
+  }
+
+  .timeline-card-footer {
+    margin-top: auto;
+    padding-top: 1.5rem;
+  }
+
+  .timeline-milestone {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--color-text-muted);
+    padding: 0.35rem 0.85rem;
+    border-radius: var(--radius-pill);
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(22, 78, 32, 0.4);
+    letter-spacing: 0.02em;
+
+    .milestone-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: rgba(22, 78, 32, 0.9);
+    }
+  }
+
+  &.step-26 .timeline-milestone {
+    color: rgba(255, 255, 255, 0.9);
+    border-color: rgba(0, 230, 91, 0.3);
+
+    .milestone-dot {
+      background: var(--color-accent-neon);
+      box-shadow: 0 0 8px var(--color-accent-neon);
+    }
+  }
+
+  &.step-27 .timeline-milestone {
+    color: #ffffff;
+    border-color: rgba(0, 230, 91, 0.5);
+    background: rgba(0, 230, 91, 0.08);
+
+    .milestone-dot {
+      background: var(--color-accent-neon);
+      box-shadow: 0 0 10px var(--color-accent-neon);
+      animation: pulseMilestoneDot 2s ease-in-out infinite;
+    }
+  }
+}
+
+@keyframes pulseMilestoneDot {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.4); opacity: 0.7; }
+}
+
+/* Connecting Arrow Separator between cards */
+.timeline-arrow-separator {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+
+  .arrow-circle {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: rgba(10, 22, 13, 0.95);
+    border: 1.5px solid rgba(0, 230, 91, 0.5);
+    display: grid;
+    place-items: center;
+    color: var(--color-accent-neon);
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.6), 0 0 16px rgba(0, 230, 91, 0.22);
+    transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+  }
+
+  .arrow-icon {
+    width: 20px;
+    height: 20px;
+  }
+
+  &:hover .arrow-circle {
+    transform: scale(1.15);
+    border-color: var(--color-accent-neon);
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.8), 0 0 24px rgba(0, 230, 91, 0.45);
+  }
+
+  @media (max-width: 991px) {
+    transform: rotate(90deg);
+    margin: 0.25rem 0;
+  }
+}
+
 /* ==========================================================================
    CONTACT SECTION
    ========================================================================== */
