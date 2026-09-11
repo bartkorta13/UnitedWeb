@@ -25,6 +25,14 @@ You can run DynamoDB Local in any of these ways:
 - **Docker**: `docker compose up -d` (uses official `amazon/dynamodb-local:latest`).
 - **Standalone Gradle**: `./gradlew :core-service:startDynamoDbLocal`.
 
+### Run Scraper Locally (Populate DynamoDB Local with Live DZPS Data):
+Aby pobrać aktualną tabelę i terminarz z oficjalnego serwisu DZPS i zapisać je w lokalnej bazie DynamoDB:
+```bash
+./gradlew :scraper-lambda:run
+```
+(lub uruchom `fun main()` w `scraper-lambda/src/main/kotlin/com/united/LocalScraper.kt`).
+Scraper automatycznie wykrywa `http://localhost:8000` i nie łączy się z produkcją AWS.
+
 ---
 
 ## 2. Start Backend API (`core-service`)
