@@ -2527,92 +2527,261 @@ nav {
 }
 
 /* ==========================================================================
-   ABOUT CLUB SECTION (Screenshot 3 Style - 01/02/03 steps with green glow)
+   ABOUT CLUB SECTION (Progressive 25' -> 26' -> 27' Timeline Flow)
    ========================================================================== */
 .section-club {
   background: #000000;
   border-top: 1px solid rgba(22, 78, 32, 0.3);
-}
-
-.club-features-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 2rem;
-}
-
-.feature-card {
   position: relative;
-  background: rgba(9, 16, 11, 0.75);
-  border: 1px solid rgba(22, 78, 32, 0.5);
-  border-radius: var(--radius-lg);
-  padding: clamp(2rem, 3.5vw, 2.6rem);
   overflow: hidden;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 25%;
+    right: 5%;
+    width: 650px;
+    height: 650px;
+    background: radial-gradient(circle, rgba(0, 230, 91, 0.05) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+}
+
+.club-timeline-flow {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.25rem;
+  width: 100%;
+
+  @media (max-width: 991px) {
+    flex-direction: column;
+    align-items: center;
+    gap: 1.25rem;
+  }
+}
+
+/* Individual Timeline Cards - Progressively larger in height, padding, font & visual presence */
+.timeline-card {
+  position: relative;
   display: flex;
   flex-direction: column;
-  gap: 1.2rem;
-  transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  transition: transform 0.3s cubic-bezier(0.2, 0, 0, 1),
+              border-color 0.25s ease,
+              box-shadow 0.3s ease;
 
-  &:hover {
-    transform: translateY(-5px);
-    border-color: rgba(0, 230, 91, 0.5);
-    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.7);
+  /* Card 1: 25' (Początki - Baseline compact) */
+  &.step-25 {
+    flex: 1 1 29%;
+    min-height: 400px;
+    padding: clamp(1.8rem, 2.6vw, 2.2rem);
+    border: 1px solid rgba(22, 78, 32, 0.45);
+    background: linear-gradient(175deg, rgba(12, 22, 14, 0.85) 0%, rgba(6, 12, 8, 0.95) 100%);
 
-    .feature-icon-wrapper {
-      transform: scale(1.06);
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+    .timeline-year-watermark {
+      font-size: clamp(5.6rem, 6.8vw, 7.2rem);
+      color: rgba(22, 78, 32, 0.35);
+      text-shadow: 0 0 18px rgba(0, 230, 91, 0.1);
+    }
+
+    &:hover {
+      transform: translateY(-6px);
+      border-color: rgba(0, 230, 91, 0.45);
+      box-shadow: 0 16px 36px rgba(0, 0, 0, 0.7), 0 0 20px rgba(0, 230, 91, 0.1);
+
+      .timeline-year-watermark {
+        color: rgba(0, 230, 91, 0.3);
+        transform: scale(1.05);
+      }
     }
   }
 
-  .feature-watermark {
+  /* Card 2: 26' (Teraźniejszość - Medium / Active distinct stage) */
+  &.step-26 {
+    flex: 1 1 33%;
+    min-height: 440px;
+    padding: clamp(2.1rem, 3.2vw, 2.6rem);
+    border: 1.5px solid rgba(0, 230, 91, 0.45);
+    background: linear-gradient(175deg, rgba(14, 28, 18, 0.9) 0%, rgba(8, 16, 10, 0.96) 100%);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), 0 0 20px rgba(0, 230, 91, 0.08);
+
+    .timeline-year-watermark {
+      font-size: clamp(6.8rem, 8vw, 8.4rem);
+      color: rgba(0, 230, 91, 0.22);
+      text-shadow: 0 0 25px rgba(0, 230, 91, 0.16);
+    }
+
+    &:hover {
+      transform: translateY(-8px);
+      border-color: rgba(0, 230, 91, 0.7);
+      box-shadow: 0 20px 45px rgba(0, 0, 0, 0.75), 0 0 28px rgba(0, 230, 91, 0.22);
+
+      .timeline-year-watermark {
+        color: rgba(0, 230, 91, 0.38);
+        transform: scale(1.06);
+      }
+    }
+  }
+
+  /* Card 3: 27' (Przyszłość - Largest / Hero presence with full neon glow) */
+  &.step-27 {
+    flex: 1 1 38%;
+    min-height: 480px;
+    padding: clamp(2.5rem, 3.8vw, 3rem);
+    border: 2px solid rgba(0, 230, 91, 0.7);
+    background: linear-gradient(175deg, rgba(16, 36, 20, 0.95) 0%, rgba(9, 20, 12, 0.98) 100%);
+    box-shadow: 0 16px 42px rgba(0, 0, 0, 0.6), 0 0 35px rgba(0, 230, 91, 0.18);
+
+    .timeline-year-watermark {
+      font-size: clamp(8rem, 9.5vw, 9.8rem);
+      color: rgba(0, 230, 91, 0.28);
+      text-shadow: 0 0 35px rgba(0, 230, 91, 0.25);
+    }
+
+    &:hover {
+      transform: translateY(-10px);
+      border-color: var(--color-accent-neon);
+      box-shadow: 0 24px 55px rgba(0, 0, 0, 0.8), 0 0 45px rgba(0, 230, 91, 0.32);
+
+      .timeline-year-watermark {
+        color: rgba(0, 230, 91, 0.45);
+        transform: scale(1.07);
+      }
+    }
+  }
+
+  @media (max-width: 991px) {
+    &.step-25,
+    &.step-26,
+    &.step-27 {
+      width: 100%;
+      max-width: 540px;
+      min-height: auto;
+    }
+  }
+
+  /* Giant athletic watermark with the year (25', 26', 27') - styled identically to player jersey numbers */
+  .timeline-year-watermark {
     position: absolute;
-    top: -10px;
-    right: 15px;
+    top: 4px;
+    right: 14px;
     font-family: var(--font-display);
-    font-size: 6.5rem;
     font-weight: 900;
-    color: rgba(22, 78, 32, 0.25);
-    line-height: 1;
+    line-height: 0.85;
+    letter-spacing: -0.04em;
     pointer-events: none;
     user-select: none;
+    z-index: 1;
+    transform-origin: top right;
+    transition: color 0.3s ease, transform 0.35s cubic-bezier(0.2, 0, 0, 1), text-shadow 0.3s ease;
   }
 
-  .feature-icon-wrapper {
+  .timeline-card-header {
     position: relative;
     z-index: 2;
-    width: 60px;
-    height: 60px;
-    border-radius: var(--radius-md);
-    background: linear-gradient(135deg, #164e20 0%, #0c2b12 100%);
-    border: 1px solid rgba(0, 230, 91, 0.5);
-    display: grid;
-    place-items: center;
-    color: var(--color-accent-neon);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-    transition: transform 0.25s ease, box-shadow 0.25s ease;
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+    margin-bottom: 1.3rem;
+  }
 
-    .feature-svg {
-      width: 28px;
-      height: 28px;
+  .timeline-badge {
+    align-self: flex-start;
+    font-family: var(--font-display);
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 0.28rem 0.75rem;
+    border-radius: var(--radius-pill);
+    background: rgba(22, 78, 32, 0.45);
+    color: rgba(255, 255, 255, 0.9);
+    border: 1px solid rgba(22, 78, 32, 0.65);
+
+    &.badge-current {
+      background: rgba(0, 230, 91, 0.18);
+      color: var(--color-accent-neon);
+      border-color: rgba(0, 230, 91, 0.6);
+      box-shadow: 0 0 12px rgba(0, 230, 91, 0.25);
+    }
+
+    &.badge-future {
+      background: linear-gradient(135deg, rgba(0, 230, 91, 0.25) 0%, rgba(22, 78, 32, 0.45) 100%);
+      color: #ffffff;
+      border-color: var(--color-accent-neon);
+      box-shadow: 0 0 16px rgba(0, 230, 91, 0.35);
     }
   }
 
-  .feature-title {
-    position: relative;
-    z-index: 2;
+  .timeline-title {
     font-family: var(--font-display);
-    font-size: 1.35rem;
+    font-size: clamp(1.35rem, 1.8vw, 1.65rem);
     font-weight: 800;
     color: #ffffff;
     margin: 0;
+    letter-spacing: -0.01em;
   }
 
-  .feature-desc {
+  .timeline-desc {
     position: relative;
     z-index: 2;
     color: var(--color-text-dim);
-    font-size: 0.92rem;
+    font-size: 0.94rem;
     line-height: 1.65;
+    margin: 0 0 1rem 0;
+  }
+
+  .timeline-desc-extra {
+    position: relative;
+    z-index: 2;
+    color: rgba(255, 255, 255, 0.76);
+    font-size: 0.91rem;
+    line-height: 1.6;
     margin: 0;
+  }
+}
+
+/* Connecting Arrow Separator between cards */
+.timeline-arrow-separator {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+
+  .arrow-circle {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: rgba(10, 22, 13, 0.95);
+    border: 1.5px solid rgba(0, 230, 91, 0.5);
+    display: grid;
+    place-items: center;
+    color: var(--color-accent-neon);
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.6), 0 0 14px rgba(0, 230, 91, 0.25);
+    transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+  }
+
+  .arrow-icon {
+    width: 20px;
+    height: 20px;
+  }
+
+  &:hover .arrow-circle {
+    transform: scale(1.15);
+    border-color: var(--color-accent-neon);
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.8), 0 0 22px rgba(0, 230, 91, 0.45);
+  }
+
+  @media (max-width: 991px) {
+    transform: rotate(90deg);
+    margin: 0.35rem 0;
   }
 }
 
