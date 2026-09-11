@@ -22,24 +22,15 @@
       <div class="header-actions">
         <button
           type="button"
-          class="btn-secondary"
-          [disabled]="saving()"
-          (click)="saveArticle(false)"
-        >
-          Zapisz jako szkic
-        </button>
-
-        <button
-          type="button"
           class="btn-primary"
           [disabled]="saving()"
-          (click)="saveArticle(true)"
+          (click)="saveArticle()"
         >
           @if (saving()) {
             <span class="spinner-small"></span>
             <span>Zapisywanie...</span>
           } @else {
-            <span>{{ isEditMode() ? 'Zapisz zmiany' : 'Opublikuj artykuł' }}</span>
+            <span>Zapisz</span>
           }
         </button>
       </div>
@@ -240,24 +231,6 @@
           maxlength="300"
         ></textarea>
         <span class="char-counter">{{ excerpt().length }}/300</span>
-      </div>
-
-      <!-- Publishing Status Card -->
-      <div class="form-card">
-        <h3 class="form-label">Widoczność wpisu</h3>
-        <label class="toggle-checkbox-label">
-          <input
-            type="checkbox"
-            class="form-checkbox"
-            [ngModel]="published()"
-            (ngModelChange)="published.set($event)"
-          />
-          <div class="checkbox-custom"></div>
-          <div class="checkbox-text">
-            <strong>Opublikuj artykuł</strong>
-            <span>Artykuł będzie od razu widoczny dla kibiców na stronie głównej oraz podstronie aktualności.</span>
-          </div>
-        </label>
       </div>
     </div>
   </div>

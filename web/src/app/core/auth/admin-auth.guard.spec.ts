@@ -37,14 +37,12 @@ describe('adminAuthGuard', () => {
     expect(tree.toString()).toContain('/admin/login?returnUrl=%2Fadmin%2Faktualnosci');
   });
 
-  it('should allow access if authenticated', (done) => {
-    authService.login({ email: 'admin@united.pl', password: 'password123' }).subscribe(() => {
-      const route = {} as ActivatedRouteSnapshot;
-      const state = { url: '/admin/aktualnosci' } as RouterStateSnapshot;
+  it('should allow access if authenticated', () => {
+    authService.isAuthenticated.set(true);
+    const route = {} as ActivatedRouteSnapshot;
+    const state = { url: '/admin/aktualnosci' } as RouterStateSnapshot;
 
-      const result = TestBed.runInInjectionContext(() => adminAuthGuard(route, state));
-      expect(result).toBeTrue();
-      done();
-    });
+    const result = TestBed.runInInjectionContext(() => adminAuthGuard(route, state));
+    expect(result).toBeTrue();
   });
 });

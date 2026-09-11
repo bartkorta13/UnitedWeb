@@ -313,7 +313,7 @@ class ApiLambdaHandlerTest {
         val fakeNews = listOf(
             com.united.model.NewsSummary("1", "Draft Article", "draft-article", "https://cdn.example.com/main.jpg", "Excerpt", "2026-03-11T10:00:00Z", published = false)
         )
-        coEvery { mockRepository.getNews(includeUnpublished = true, includeDeleted = true) } returns fakeNews
+        coEvery { mockRepository.getNews(includeUnpublished = true, includeDeleted = false) } returns fakeNews
 
         val request = ApiRequest().apply {
             rawPath = "/admin/news"

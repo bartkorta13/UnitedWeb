@@ -209,7 +209,7 @@ export class AdminNewsEditorView implements OnInit {
   }
 
   // --- Save Article ---
-  saveArticle(publishNow?: boolean): void {
+  saveArticle(): void {
     const currentTitle = this.title().trim();
     const currentPhoto = this.mainPhotoUrl().trim();
 
@@ -225,7 +225,6 @@ export class AdminNewsEditorView implements OnInit {
       return;
     }
 
-    const isPublished = publishNow !== undefined ? publishNow : this.published();
     this.saving.set(true);
     this.errorMessage.set(null);
 
@@ -236,7 +235,7 @@ export class AdminNewsEditorView implements OnInit {
         contentHtml: this.contentHtml(),
         excerpt: this.excerpt().trim() || undefined,
         galleryPhotos: this.galleryPhotos(),
-        published: isPublished,
+        published: this.published(),
       };
 
       this.adminNewsApi.updateNews(this.newsId(), updateReq).subscribe({
@@ -257,7 +256,7 @@ export class AdminNewsEditorView implements OnInit {
         contentHtml: this.contentHtml(),
         excerpt: this.excerpt().trim() || undefined,
         galleryPhotos: this.galleryPhotos(),
-        published: isPublished,
+        published: false,
       };
 
       this.adminNewsApi.createNews(createReq).subscribe({

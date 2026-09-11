@@ -169,9 +169,9 @@ class ApiLambdaHandler(
                         }
                     }
 
-                    // 8. GET /admin/news (returns all news, including unpublished and soft-deleted)
+                    // 8. GET /admin/news (returns all news, including unpublished, excluding soft-deleted)
                     actualPath.trimEnd('/') == "/admin/news" && method == "GET" -> {
-                        val allNews = dynamoRepository.getNews(includeUnpublished = true, includeDeleted = true)
+                        val allNews = dynamoRepository.getNews(includeUnpublished = true, includeDeleted = false)
                         ApiResponse(body = objectMapper.writeValueAsString(allNews))
                     }
 

@@ -26,8 +26,13 @@ describe('AdminNewsApiService', () => {
     authService = TestBed.inject(AdminAuthService);
     httpMock = TestBed.inject(HttpTestingController);
 
-    // Mock an active login
-    authService.login({ email: 'admin@united.pl', password: 'password123' }).subscribe();
+    // Mock an active session directly without HTTP
+    authService.currentUser.set({
+      email: 'admin@united.pl',
+      token: 'fake-jwt-token',
+      exp: Math.floor(Date.now() / 1000) + 3600,
+    });
+    authService.isAuthenticated.set(true);
   });
 
   afterEach(() => {

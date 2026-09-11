@@ -264,6 +264,38 @@
       transition: all 0.15s ease;
       border: 1px solid transparent;
 
+      &.publish-btn {
+        background: rgba(0, 230, 91, 0.15);
+        color: #00e65b;
+        border-color: rgba(0, 230, 91, 0.35);
+
+        &:hover:not(:disabled) {
+          background: rgba(0, 230, 91, 0.25);
+          color: #ffffff;
+        }
+
+        &:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
+        }
+      }
+
+      &.unpublish-btn {
+        background: rgba(251, 191, 36, 0.12);
+        color: #fbbf24;
+        border-color: rgba(251, 191, 36, 0.3);
+
+        &:hover:not(:disabled) {
+          background: rgba(251, 191, 36, 0.22);
+          color: #ffffff;
+        }
+
+        &:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
+        }
+      }
+
       &.edit-btn {
         background: rgba(0, 230, 91, 0.1);
         color: #00e65b;

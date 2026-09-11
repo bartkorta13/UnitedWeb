@@ -22,10 +22,34 @@ export class AdminNewsListView implements OnInit {
   readonly deleteModalOpen = signal(false);
   readonly itemToDelete = signal<NewsSummary | null>(null);
   readonly deleting = signal(false);
+  readonly togglingPublishId = signal<string | null>(null);
   readonly notification = signal<{ message: string; type: 'success' | 'error' } | null>(null);
 
   ngOnInit(): void {
     this.loadNews();
+  }
+
+  togglePublish(item: NewsSummary): void {
+    const nextState = !item.published;
+    this.togglingPublishId.set(item.id);
+
+    this.adminNewsApi.updateNews(item.id, { published: nextState }).subscribe({
+      next: (updated) => {
+        this.togglingPublishId.set(null);
+        this.newsList.update((list) =>
+          list.map((n) => (n.id === item.id ? { ...n, published: updated.published } : n))
+        );
+        const actionText = nextState
+          ? `Artykuł „${item.title}” został pomyślnie opublikowany.`
+          : `Publikacja artykułu „${item.title}” została cofnięta.`;
+        this.showNotification(actionText, 'success');
+      },
+      error: (err) => {
+        this.togglingPublishId.set(null);
+        console.error('Error toggling publish state:', err);
+        this.showNotification('Wystąpił błąd podczas zmiany statusu publikacji.', 'error');
+      },
+    });
   }
 
   loadNews(): void {
