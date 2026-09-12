@@ -176,6 +176,13 @@ export class HomeView implements OnInit, OnDestroy {
   protected onClubPointerDown(event: PointerEvent): void {
     if (event.button !== 0 && event.pointerType === 'mouse') return;
 
+    // If another pointer is already active, or this touch is secondary (e.g. multi-touch pinch-to-zoom),
+    // cancel drag immediately so the browser handles pinch-to-zoom cleanly.
+    if (event.pointerType === 'touch' && (event.isPrimary === false || (this.activePointerId !== null && this.activePointerId !== event.pointerId))) {
+      this.cancelClubDrag();
+      return;
+    }
+
     this.activePointerId = event.pointerId;
     this.dragStartX = event.clientX;
     this.dragStartY = event.clientY;
@@ -190,6 +197,12 @@ export class HomeView implements OnInit, OnDestroy {
   protected onClubPointerMove(event: PointerEvent): void {
     if (this.activePointerId !== event.pointerId || this.isVerticalScroll) return;
 
+    // If a multi-touch gesture starts during move, abort drag
+    if (event.pointerType === 'touch' && event.isPrimary === false) {
+      this.cancelClubDrag();
+      return;
+    }
+
     const deltaX = event.clientX - this.dragStartX;
     const deltaY = event.clientY - this.dragStartY;
 
@@ -203,9 +216,11 @@ export class HomeView implements OnInit, OnDestroy {
         this.isDraggingClub.set(true);
         this.hasDraggedFar = true;
 
-        try {
-          (event.currentTarget as HTMLElement)?.setPointerCapture(event.pointerId);
-        } catch {}
+        if (event.pointerType === 'mouse') {
+          try {
+            (event.currentTarget as HTMLElement)?.setPointerCapture(event.pointerId);
+          } catch {}
+        }
       }
     }
 
@@ -223,7 +238,7 @@ export class HomeView implements OnInit, OnDestroy {
   protected onClubPointerUp(event: PointerEvent): void {
     if (this.activePointerId !== event.pointerId) return;
 
-    if (this.isHorizontalDrag) {
+    if (this.isHorizontalDrag && event.pointerType === 'mouse') {
       try {
         (event.currentTarget as HTMLElement)?.releasePointerCapture(event.pointerId);
       } catch {}
@@ -258,21 +273,25 @@ export class HomeView implements OnInit, OnDestroy {
   protected onClubPointerCancel(event: PointerEvent): void {
     if (this.activePointerId !== event.pointerId) return;
 
-    if (this.isHorizontalDrag) {
+    if (this.isHorizontalDrag && event.pointerType === 'mouse') {
       try {
         (event.currentTarget as HTMLElement)?.releasePointerCapture(event.pointerId);
       } catch {}
     }
 
+    this.cancelClubDrag();
+
+    setTimeout(() => {
+      this.hasDraggedFar = false;
+    }, 120);
+  }
+
+  private cancelClubDrag(): void {
     this.isDraggingClub.set(false);
     this.clubDragOffset.set(0);
     this.activePointerId = null;
     this.isHorizontalDrag = false;
     this.isVerticalScroll = false;
-
-    setTimeout(() => {
-      this.hasDraggedFar = false;
-    }, 120);
   }
 
   protected onClubWheel(event: WheelEvent): void {

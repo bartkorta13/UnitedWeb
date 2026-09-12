@@ -27,15 +27,14 @@ main {
   position: absolute;
   pointer-events: none;
   border-radius: 50%;
-  filter: blur(100px);
-  opacity: 0.45;
+  opacity: 0.6;
 
   &.stadium-glow-top {
     top: -120px;
     left: 25%;
     width: 650px;
     height: 450px;
-    background: radial-gradient(circle, rgba(22, 78, 32, 0.25) 0%, rgba(0, 230, 91, 0.04) 50%, transparent 70%);
+    background: radial-gradient(circle, rgba(22, 78, 32, 0.4) 0%, rgba(0, 230, 91, 0.08) 40%, transparent 70%);
   }
 
   &.stadium-glow-right {
@@ -43,7 +42,7 @@ main {
     right: -100px;
     width: 500px;
     height: 500px;
-    background: radial-gradient(circle, rgba(22, 78, 32, 0.2) 0%, rgba(0, 230, 91, 0.02) 55%, transparent 75%);
+    background: radial-gradient(circle, rgba(22, 78, 32, 0.35) 0%, rgba(0, 230, 91, 0.05) 45%, transparent 75%);
   }
 }
 
@@ -976,9 +975,8 @@ main {
   flex-direction: column;
   justify-content: space-between;
   gap: 1.1rem;
-  backdrop-filter: blur(10px);
   border: 1px solid rgba(22, 78, 32, 0.5);
-  background: rgba(10, 18, 12, 0.75);
+  background: rgba(10, 18, 12, 0.92);
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
   transition: border-color 0.25s ease, box-shadow 0.25s ease;
@@ -2318,7 +2316,6 @@ main {
       background: rgba(15, 23, 42, 0.95);
       color: rgba(255, 255, 255, 0.95);
       border: 1.5px solid rgba(255, 255, 255, 0.25);
-      backdrop-filter: blur(12px);
       box-shadow: 0 4px 14px rgba(0, 0, 0, 0.65);
 
       /* Rozgrywający: Błękitny */
@@ -2686,7 +2683,7 @@ main {
   width: 100%;
   max-width: 100%;
   overflow: hidden;
-  touch-action: pan-y;
+  touch-action: pan-y pinch-zoom;
   user-select: none;
   -webkit-user-select: none;
   outline: none;
@@ -2716,7 +2713,7 @@ main {
   align-items: center;
   justify-content: center;
   perspective: 1100px;
-  touch-action: pan-y;
+  touch-action: pan-y pinch-zoom;
 }
 
 /* Individual Card in the selector: equal base height, smaller compact footprint */
@@ -2735,9 +2732,9 @@ main {
   user-select: none;
   -webkit-user-select: none;
   -webkit-user-drag: none;
-  touch-action: pan-y;
+  touch-action: pan-y pinch-zoom;
   transform-origin: center center;
-  will-change: transform, opacity, filter;
+  will-change: transform, opacity;
   transition: transform 0.5s cubic-bezier(0.25, 1, 0.45, 1),
               opacity 0.45s ease,
               filter 0.45s ease,
@@ -3056,9 +3053,8 @@ main {
   transform: translateX(-50%);
   width: 650px;
   height: 450px;
-  background: radial-gradient(circle, rgba(0, 230, 91, 0.09) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(0, 230, 91, 0.12) 0%, transparent 70%);
   pointer-events: none;
-  filter: blur(80px);
 }
 
 .partners-headline {
@@ -3600,8 +3596,6 @@ main {
   color: var(--color-text-muted);
   font-size: 0.95rem;
   text-align: center;
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
 
   p {
     margin: 0;
@@ -3658,9 +3652,7 @@ main {
     top: 70px;
     left: 0;
     right: 0;
-    background: rgba(3, 6, 4, 0.98);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
+    background: #030604;
     flex-direction: column;
     align-items: flex-start;
     padding: 1.8rem clamp(1rem, 4vw, 2rem);
@@ -3791,6 +3783,19 @@ main {
 
   .standings-card-container {
     padding: 1.2rem 0.85rem;
+  }
+
+  .featured-match-showcase,
+  .hero-stats-ribbon,
+  .standings-card-container,
+  .sponsor-card,
+  .club-select-card {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+
+  .club-select-card {
+    will-change: auto !important;
   }
 }
 
