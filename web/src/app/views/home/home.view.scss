@@ -918,8 +918,10 @@ main {
 
 .fixtures-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
-  gap: clamp(1rem, 2.5vw, 1.5rem);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: clamp(1rem, 2vw, 1.5rem);
+  width: 100%;
+  max-width: 100%;
 }
 
 .fixtures-loading-state {
@@ -944,6 +946,10 @@ main {
   outline: none;
   transition: transform 0.25s ease;
   user-select: none;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 
   &:hover {
     transform: translateY(-4px);
@@ -958,10 +964,13 @@ main {
 .match-card-inner {
   position: relative;
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
   height: 100%;
   min-height: 295px;
   transform-style: preserve-3d;
   transition: transform 0.6s cubic-bezier(0.4, 0.2, 0.2, 1);
+  box-sizing: border-box;
 }
 
 .match-card.is-flipped .match-card-inner {
@@ -980,6 +989,11 @@ main {
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
   transition: border-color 0.25s ease, box-shadow 0.25s ease;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  overflow: hidden;
 
   .match-card:hover & {
     border-color: rgba(0, 230, 91, 0.5);
@@ -1298,6 +1312,10 @@ main {
   flex-direction: column;
   gap: 0.75rem;
   padding: 0.5rem 0;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 
   .team-row {
     display: flex;
@@ -1306,6 +1324,10 @@ main {
     font-size: 0.98rem;
     color: var(--color-text-dim);
     font-weight: 600;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
 
     .team-logo-inline {
       width: 38px;
@@ -1325,6 +1347,7 @@ main {
       height: 6px;
       border-radius: 50%;
       background: var(--color-text-subtle);
+      flex-shrink: 0;
 
       &.active-dot {
         background: var(--color-accent-neon);
@@ -1333,7 +1356,8 @@ main {
     }
 
     .team-name {
-      flex: 1;
+      flex: 1 1 auto;
+      min-width: 0;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
@@ -1375,6 +1399,10 @@ main {
   border-top: 1px solid rgba(22, 78, 32, 0.3);
   font-size: 0.74rem;
   color: var(--color-text-muted);
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 
   .venue-location {
     display: flex;
@@ -1382,6 +1410,7 @@ main {
     gap: 0.4rem;
     min-width: 0;
     flex: 1;
+    overflow: hidden;
 
     span {
       white-space: normal;
@@ -3677,6 +3706,10 @@ main {
       margin-top: 0.5rem;
     }
   }
+
+  .fixtures-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 960px) {
@@ -3777,7 +3810,7 @@ main {
   }
 
   .fixtures-grid {
-    grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
+    grid-template-columns: minmax(0, 1fr);
     gap: 1.2rem;
   }
 
@@ -4003,7 +4036,7 @@ main {
   }
 
   .fixtures-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .filter-pills {
