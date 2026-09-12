@@ -211,7 +211,7 @@ export class HomeView implements OnInit, OnDestroy {
         this.isVerticalScroll = true;
         return;
       }
-      if (Math.abs(deltaX) > 8) {
+      if (Math.abs(deltaX) > 6) {
         this.isHorizontalDrag = true;
         this.isDraggingClub.set(true);
         this.hasDraggedFar = true;
@@ -225,7 +225,7 @@ export class HomeView implements OnInit, OnDestroy {
     }
 
     if (this.isHorizontalDrag) {
-      const maxDrag = 160;
+      const maxDrag = 200;
       let dampedX = deltaX;
       if (Math.abs(deltaX) > maxDrag) {
         const excess = Math.abs(deltaX) - maxDrag;
@@ -246,10 +246,10 @@ export class HomeView implements OnInit, OnDestroy {
 
     const offset = this.clubDragOffset();
     const elapsed = Date.now() - this.dragStartTime;
-    const isQuickFlick = elapsed < 300 && Math.abs(offset) > 25;
-    const isStrongDrag = Math.abs(offset) > 45;
+    const isQuickFlick = elapsed < 450 && Math.abs(offset) > 18;
+    const isDrag = Math.abs(offset) > 22;
 
-    if (this.isHorizontalDrag && (isQuickFlick || isStrongDrag)) {
+    if (this.isHorizontalDrag && (isQuickFlick || isDrag)) {
       if (offset < 0) {
         this.nextClubStep();
       } else {

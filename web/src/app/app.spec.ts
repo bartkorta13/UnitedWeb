@@ -1809,6 +1809,9 @@ describe('HomeView', () => {
 
       expect(app['isDraggingClub']()).toBeTrue();
       expect(app['clubDragOffset']()).toBe(-80);
+      fixture.detectChanges();
+      const selectorEl = fixture.nativeElement.querySelector('.club-card-selector') as HTMLElement | null;
+      expect(selectorEl?.style.getPropertyValue('--club-drag-x')).toBe('-80px');
 
       // Release pointer
       app['onClubPointerUp']({

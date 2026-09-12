@@ -1019,6 +1019,7 @@
       <div
         class="club-card-selector"
         [class.is-dragging]="isDraggingClub()"
+        [style.--club-drag-x]="clubDragOffset() + 'px'"
         (pointerdown)="onClubPointerDown($event)"
         (pointermove)="onClubPointerMove($event)"
         (pointerup)="onClubPointerUp($event)"
