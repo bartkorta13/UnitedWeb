@@ -515,9 +515,145 @@
 @media (max-width: 1024px) {
   .editor-grid {
     grid-template-columns: 1fr;
+    gap: 1.25rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .editor-header {
+    margin-bottom: 1.25rem;
+
+    .header-breadcrumb {
+      margin-bottom: 0.5rem;
+
+      .back-link {
+        font-size: 0.8rem;
+      }
+    }
+
+    .header-main {
+      flex-direction: row;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+
+      .page-title {
+        font-size: 1.35rem;
+      }
+
+      .header-actions {
+        .btn-primary {
+          padding: 0.55rem 1.1rem;
+          font-size: 0.85rem;
+          min-height: 38px;
+        }
+      }
+    }
   }
 
+  .editor-main-col,
   .editor-sidebar-col {
-    order: -1;
+    gap: 1.25rem;
+  }
+
+  .form-card {
+    padding: 1rem 0.85rem;
+    border-radius: 10px;
+
+    .form-label {
+      font-size: 0.9rem;
+    }
+
+    .form-hint {
+      font-size: 0.76rem;
+      margin-bottom: 0.75rem;
+    }
+  }
+
+  .form-input-title {
+    font-size: 1.15rem;
+    padding: 0.75rem 0.85rem;
+  }
+
+  .slug-group {
+    margin-top: 0.75rem;
+
+    .slug-input-wrapper {
+      .slug-prefix {
+        padding: 0.5rem 0.6rem;
+        font-size: 0.78rem;
+      }
+
+      .form-input-slug {
+        padding: 0.5rem 0.6rem;
+        font-size: 0.78rem;
+      }
+    }
+  }
+
+  .main-photo-dropzone {
+    padding: 1.75rem 1rem;
+
+    .dropzone-text {
+      font-size: 0.82rem;
+    }
+
+    .dropzone-subtext {
+      font-size: 0.72rem;
+    }
+  }
+
+  .main-photo-preview .photo-overlay-actions {
+    opacity: 1;
+    top: auto;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.65);
+    padding: 0.5rem;
+    gap: 0.5rem;
+
+    .photo-action-btn {
+      padding: 0.35rem 0.75rem;
+      font-size: 0.78rem;
+      min-height: 32px;
+    }
+  }
+
+  .gallery-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.5rem;
+
+    .upload-badge {
+      font-size: 0.75rem;
+    }
+  }
+
+  .gallery-dropzone {
+    padding: 1.25rem 0.75rem;
+
+    .dropzone-text {
+      font-size: 0.8rem;
+    }
+
+    .dropzone-subtext {
+      font-size: 0.7rem;
+    }
+  }
+
+  .gallery-preview-grid {
+    grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+    gap: 0.65rem;
+
+    .gallery-preview-item .gallery-remove-btn {
+      opacity: 1;
+      width: 28px;
+      height: 28px;
+      font-size: 0.85rem;
+    }
+  }
+
+  .form-textarea {
+    padding: 0.65rem 0.85rem;
+    font-size: 0.88rem;
   }
 }

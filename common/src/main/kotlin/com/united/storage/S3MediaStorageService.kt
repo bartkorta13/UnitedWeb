@@ -8,27 +8,45 @@ import aws.smithy.kotlin.runtime.auth.awscredentials.Credentials
 import aws.smithy.kotlin.runtime.net.url.Url
 import com.united.model.GenerateUploadUrlRequest
 import com.united.model.GenerateUploadUrlResponse
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import java.util.UUID
 import kotlin.time.Duration.Companion.minutes
 
 class S3MediaStorageService(
     private val bucketName: String = System.getenv("ASSETS_S3_BUCKET") ?: System.getProperty("ASSETS_S3_BUCKET") ?: "united-league-assets",
     private val cdnBaseUrl: String = System.getenv("ASSETS_CDN_URL") ?: System.getProperty("ASSETS_CDN_URL") ?: "https://d1rm5h55nlqrob.cloudfront.net",
-    private val endpointUrl: String? = System.getenv("S3_ENDPOINT") ?: System.getProperty("S3_ENDPOINT")
-) {
+    private val endpointUrl: String? = System.getenv("S3_ENDPOINT") ?: System.getProperty("S3_ENDPOINT"),
+    private var client: S3Client? = null
+) : AutoCloseable {
 
-    private suspend fun createClient(): S3Client {
-        val endpoint = endpointUrl ?: System.getenv("S3_ENDPOINT") ?: System.getProperty("S3_ENDPOINT")
-        return if (!endpoint.isNullOrBlank()) {
-            S3Client {
-                this.endpointUrl = Url.parse(endpoint)
-                this.region = "eu-central-1"
-                this.forcePathStyle = true
-                this.credentialsProvider = StaticCredentialsProvider(Credentials("dummyAccessKey", "dummySecretKey"))
+    private val clientMutex = Mutex()
+
+    private suspend fun getClient(): S3Client {
+        val existing = client
+        if (existing != null) return existing
+        return clientMutex.withLock {
+            client ?: run {
+                val endpoint = endpointUrl ?: System.getenv("S3_ENDPOINT") ?: System.getProperty("S3_ENDPOINT")
+                val newClient = if (!endpoint.isNullOrBlank()) {
+                    S3Client {
+                        this.endpointUrl = Url.parse(endpoint)
+                        this.region = "eu-central-1"
+                        this.forcePathStyle = true
+                        this.credentialsProvider = StaticCredentialsProvider(Credentials("dummyAccessKey", "dummySecretKey"))
+                    }
+                } else {
+                    S3Client.fromEnvironment()
+                }
+                client = newClient
+                newClient
             }
-        } else {
-            S3Client.fromEnvironment()
         }
+    }
+
+    override fun close() {
+        client?.close()
+        client = null
     }
 
     /**
@@ -53,10 +71,9 @@ class S3MediaStorageService(
             contentType = request.contentType
         }
 
-        val presignedUrl = createClient().use { s3 ->
-            val presigned = s3.presignPutObject(putRequest, 15.minutes)
-            presigned.url.toString()
-        }
+        val s3 = getClient()
+        val presigned = s3.presignPutObject(putRequest, 15.minutes)
+        val presignedUrl = presigned.url.toString()
 
         val cleanCdn = cdnBaseUrl.trimEnd('/')
         val cdnUrl = "$cleanCdn/news/$sanitizedNewsId/$folder/$fileName"

@@ -30,7 +30,7 @@ class SeedRosterTest {
 
         assertTrue(players.isNotEmpty(), "Lista zawodników do załadowania nie może być pusta")
 
-        val tableName = System.getenv("DYNAMODB_TABLE") ?: "LeagueData"
+        val tableName = System.getenv("DYNAMODB_TABLE") ?: "LeagueData-Prod"
         println("Zapisywanie ${players.size} zawodników do tabeli '$tableName' w DynamoDB...")
 
         val repository = DynamoRepository(tableName = tableName)
@@ -50,8 +50,8 @@ class SeedRosterTest {
             return mapper.readValue<List<PlayerItem>>(rootNode.traverse())
         }
 
-        // 2. AWS DynamoDB batch-write JSON format: { "LeagueData": [ { "PutRequest": { "Item": { ... } } } ] }
-        val leagueData = rootNode.get("LeagueData")
+        // 2. AWS DynamoDB batch-write JSON format: { "LeagueData-Prod": [ { "PutRequest": { "Item": { ... } } } ] }
+        val leagueData = rootNode.get("LeagueData-Prod") ?: rootNode.get("LeagueDataProd") ?: rootNode.get("LeagueData")
         if (leagueData != null && leagueData.isArray) {
             return leagueData.mapNotNull { entry ->
                 val item = entry.get("PutRequest")?.get("Item") ?: return@mapNotNull null

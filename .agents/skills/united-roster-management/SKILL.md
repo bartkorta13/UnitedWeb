@@ -29,7 +29,7 @@ Run the custom Gradle task:
 ```bash
 ./gradlew :core-service:seedRoster
 ```
-This executes `SeedRosterTest` which reads `roster.json` and puts items into the `LeagueData` table with:
+This executes `SeedRosterTest` which reads `roster.json` and puts items into the `LeagueData-Prod` table with:
 - `PK`: `"ROSTER"`
 - `SK`: `"PLAYER#<id>"`
 

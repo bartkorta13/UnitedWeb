@@ -1,6 +1,6 @@
 import { DatePipe, DecimalPipe, NgClass, registerLocaleData } from '@angular/common';
 import localePl from '@angular/common/locales/pl';
-import { Component, computed, inject, LOCALE_ID, OnInit, signal } from '@angular/core';
+import { Component, computed, effect, inject, LOCALE_ID, OnDestroy, OnInit, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { LeagueApiService, UNITED_TEAM_NAME } from '../../core/api/league-api.service';
 import { MatchItem, PlayerItem, PlayerPosition, SetDetailItem, TeamStanding, TeamStatItem } from '../../core/api/league.models';
@@ -12,6 +12,22 @@ registerLocaleData(localePl, 'pl');
 registerLocaleData(localePl, 'pl-PL');
 
 export const ASSETS_CDN_URL: string = environment.cdnUrl;
+
+export interface CountdownTime {
+  days: string;
+  hours: string;
+  minutes: string;
+  seconds: string;
+  isExpired: boolean;
+  totalSeconds: number;
+}
+
+export interface PartnerItem {
+  id: string;
+  name: string;
+  logoFilename: string;
+  url?: string;
+}
 
 export interface ClubHistoryCard {
   id: string;
@@ -37,7 +53,7 @@ export interface ClubHistoryCard {
   templateUrl: './home.view.html',
   styleUrl: './home.view.scss',
 })
-export class HomeView implements OnInit {
+export class HomeView implements OnInit, OnDestroy {
   private readonly leagueApi = inject(LeagueApiService);
   private readonly newsApi = inject(NewsApiService);
 
@@ -49,6 +65,17 @@ export class HomeView implements OnInit {
   protected readonly heroAwayFlipped = signal(false);
   protected readonly flippedCardIds = signal<Set<string>>(new Set());
   protected readonly expandedResultIds = signal<Set<string>>(new Set());
+
+  protected readonly countdown = signal<CountdownTime>({
+    days: '00',
+    hours: '00',
+    minutes: '00',
+    seconds: '00',
+    isExpired: false,
+    totalSeconds: 0,
+  });
+
+  private countdownTimer: ReturnType<typeof setInterval> | null = null;
 
   protected readonly fixtures = this.leagueApi.fixtures;
   protected readonly results = this.leagueApi.results;
@@ -65,6 +92,17 @@ export class HomeView implements OnInit {
 
   // Club History Card Selector (25' | 26' | 27')
   protected readonly activeClubStep = signal<number>(1); // Default to 2026' (center)
+  protected readonly isDraggingClub = signal<boolean>(false);
+  protected readonly clubDragOffset = signal<number>(0);
+
+  private dragStartX = 0;
+  private dragStartY = 0;
+  private dragStartTime = 0;
+  private isHorizontalDrag = false;
+  private isVerticalScroll = false;
+  private hasDraggedFar = false;
+  private activePointerId: number | null = null;
+  private lastWheelTime = 0;
 
   protected readonly clubCards: readonly ClubHistoryCard[] = [
     {
@@ -102,7 +140,7 @@ export class HomeView implements OnInit {
       title: 'Cele na 2026/27',
       desc1: 'Dzięki dużym wzmocnieniom zarówno na płaszczyźnie infrastruktury, jak i zawodniczej możemy mierzyć jeszcze wyżej.',
       desc2: 'Jako cel na obecny sezon postawiliśmy sobie zwycięstwo w II Lidze Dolnośląskiej i awans na wyższy szczebel rozgrywkowy. Gorąco zapraszamy do kibicowania i do zobaczenia na hali w Środzie!',
-      milestone: 'Mistrzostwo II Ligi • Awans',
+      milestone: 'Czy uda się wywalczyć awans?',
       milestoneClass: 'milestone-future',
       shortLabel: 'Cel',
     },
@@ -128,31 +166,234 @@ export class HomeView implements OnInit {
     return 'pos-left';
   }
 
-  private clubTouchStartX = 0;
-
-  protected onClubTouchStart(event: TouchEvent): void {
-    this.clubTouchStartX = event.changedTouches[0]?.screenX ?? 0;
+  protected onClubCardClick(index: number): void {
+    if (this.hasDraggedFar) {
+      return;
+    }
+    this.setClubStep(index);
   }
 
-  protected onClubTouchEnd(event: TouchEvent): void {
-    const touchEndX = event.changedTouches[0]?.screenX ?? 0;
-    const diff = this.clubTouchStartX - touchEndX;
-    if (Math.abs(diff) > 45) {
-      if (diff > 0) {
+  protected onClubPointerDown(event: PointerEvent): void {
+    if (event.button !== 0 && event.pointerType === 'mouse') return;
+
+    this.activePointerId = event.pointerId;
+    this.dragStartX = event.clientX;
+    this.dragStartY = event.clientY;
+    this.dragStartTime = Date.now();
+    this.isHorizontalDrag = false;
+    this.isVerticalScroll = false;
+    this.hasDraggedFar = false;
+    this.isDraggingClub.set(false);
+    this.clubDragOffset.set(0);
+  }
+
+  protected onClubPointerMove(event: PointerEvent): void {
+    if (this.activePointerId !== event.pointerId || this.isVerticalScroll) return;
+
+    const deltaX = event.clientX - this.dragStartX;
+    const deltaY = event.clientY - this.dragStartY;
+
+    if (!this.isHorizontalDrag && !this.isVerticalScroll) {
+      if (Math.abs(deltaY) > 8 && Math.abs(deltaY) > Math.abs(deltaX)) {
+        this.isVerticalScroll = true;
+        return;
+      }
+      if (Math.abs(deltaX) > 8) {
+        this.isHorizontalDrag = true;
+        this.isDraggingClub.set(true);
+        this.hasDraggedFar = true;
+
+        try {
+          (event.currentTarget as HTMLElement)?.setPointerCapture(event.pointerId);
+        } catch {}
+      }
+    }
+
+    if (this.isHorizontalDrag) {
+      const maxDrag = 160;
+      let dampedX = deltaX;
+      if (Math.abs(deltaX) > maxDrag) {
+        const excess = Math.abs(deltaX) - maxDrag;
+        dampedX = (deltaX > 0 ? 1 : -1) * (maxDrag + excess * 0.25);
+      }
+      this.clubDragOffset.set(dampedX);
+    }
+  }
+
+  protected onClubPointerUp(event: PointerEvent): void {
+    if (this.activePointerId !== event.pointerId) return;
+
+    if (this.isHorizontalDrag) {
+      try {
+        (event.currentTarget as HTMLElement)?.releasePointerCapture(event.pointerId);
+      } catch {}
+    }
+
+    const offset = this.clubDragOffset();
+    const elapsed = Date.now() - this.dragStartTime;
+    const isQuickFlick = elapsed < 300 && Math.abs(offset) > 25;
+    const isStrongDrag = Math.abs(offset) > 45;
+
+    if (this.isHorizontalDrag && (isQuickFlick || isStrongDrag)) {
+      if (offset < 0) {
         this.nextClubStep();
       } else {
         this.prevClubStep();
       }
     }
+
+    this.isDraggingClub.set(false);
+    this.clubDragOffset.set(0);
+    this.activePointerId = null;
+    this.isHorizontalDrag = false;
+    this.isVerticalScroll = false;
+
+    if (this.hasDraggedFar) {
+      setTimeout(() => {
+        this.hasDraggedFar = false;
+      }, 120);
+    }
+  }
+
+  protected onClubPointerCancel(event: PointerEvent): void {
+    if (this.activePointerId !== event.pointerId) return;
+
+    if (this.isHorizontalDrag) {
+      try {
+        (event.currentTarget as HTMLElement)?.releasePointerCapture(event.pointerId);
+      } catch {}
+    }
+
+    this.isDraggingClub.set(false);
+    this.clubDragOffset.set(0);
+    this.activePointerId = null;
+    this.isHorizontalDrag = false;
+    this.isVerticalScroll = false;
+
+    setTimeout(() => {
+      this.hasDraggedFar = false;
+    }, 120);
+  }
+
+  protected onClubWheel(event: WheelEvent): void {
+    if (Math.abs(event.deltaX) > 25 && Math.abs(event.deltaX) > Math.abs(event.deltaY)) {
+      const now = Date.now();
+      if (now - this.lastWheelTime > 400) {
+        this.lastWheelTime = now;
+        if (event.deltaX > 0) {
+          this.nextClubStep();
+        } else {
+          this.prevClubStep();
+        }
+      }
+    }
+  }
+
+  protected onClubKeyDown(event: KeyboardEvent): void {
+    if (event.key === 'ArrowLeft') {
+      event.preventDefault();
+      this.prevClubStep();
+    } else if (event.key === 'ArrowRight') {
+      event.preventDefault();
+      this.nextClubStep();
+    }
+  }
+
+  constructor() {
+    effect(() => {
+      // Re-evaluate whenever nextMatch changes
+      this.nextMatch();
+      this.updateCountdown();
+    });
   }
 
   ngOnInit(): void {
     this.newsApi.fetchLatestNews(3);
+    this.updateCountdown();
+    this.startCountdownTimer();
+  }
+
+  ngOnDestroy(): void {
+    this.stopCountdownTimer();
+  }
+
+  protected getCountdownTargetDate(match: MatchItem | undefined | null): Date | null {
+    if (!match?.date) return null;
+    const cleanDate = match.date.trim().split(/[ T]/)[0];
+    const dateMatch = cleanDate.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!dateMatch) {
+      const parsed = new Date(match.date);
+      return isNaN(parsed.getTime()) ? null : parsed;
+    }
+    const year = parseInt(dateMatch[1], 10);
+    const month = parseInt(dateMatch[2], 10) - 1;
+    const day = parseInt(dateMatch[3], 10);
+
+    const hourStr = this.matchHour(match);
+    let hours = 12;
+    let minutes = 0;
+    if (hourStr) {
+      const [h, m] = hourStr.split(':').map((v) => parseInt(v, 10));
+      if (!isNaN(h) && !isNaN(m)) {
+        hours = h;
+        minutes = m;
+      }
+    }
+    return new Date(year, month, day, hours, minutes, 0, 0);
+  }
+
+  protected computeCountdown(nowMs: number = Date.now()): CountdownTime {
+    const match = this.nextMatch();
+    const target = this.getCountdownTargetDate(match);
+    if (!target) {
+      return { days: '00', hours: '00', minutes: '00', seconds: '00', isExpired: true, totalSeconds: 0 };
+    }
+
+    const diffMs = target.getTime() - nowMs;
+    if (diffMs <= 0) {
+      return { days: '00', hours: '00', minutes: '00', seconds: '00', isExpired: true, totalSeconds: 0 };
+    }
+
+    const totalSeconds = Math.floor(diffMs / 1000);
+    const days = Math.floor(totalSeconds / 86400);
+    const hours = Math.floor((totalSeconds % 86400) / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+
+    return {
+      days: days.toString().padStart(2, '0'),
+      hours: hours.toString().padStart(2, '0'),
+      minutes: minutes.toString().padStart(2, '0'),
+      seconds: seconds.toString().padStart(2, '0'),
+      isExpired: false,
+      totalSeconds,
+    };
+  }
+
+  protected updateCountdown(nowMs?: number): void {
+    this.countdown.set(this.computeCountdown(nowMs));
+  }
+
+  private startCountdownTimer(): void {
+    this.stopCountdownTimer();
+    if (typeof window !== 'undefined') {
+      this.countdownTimer = setInterval(() => {
+        this.updateCountdown();
+      }, 1000);
+    }
+  }
+
+  private stopCountdownTimer(): void {
+    if (this.countdownTimer !== null) {
+      clearInterval(this.countdownTimer);
+      this.countdownTimer = null;
+    }
   }
 
   protected readonly activeRosterFilter = signal<string>('all');
+  protected readonly rosterExpanded = signal<boolean>(false);
 
-  protected readonly visibleRoster = computed(() => {
+  protected readonly filteredRoster = computed(() => {
     const filter = this.activeRosterFilter();
     const all = this.roster();
     const filtered = filter === 'all' ? all : all.filter((p) => p.position === filter);
@@ -165,8 +406,30 @@ export class HomeView implements OnInit {
     });
   });
 
+  protected readonly visibleRoster = computed(() => {
+    const list = this.filteredRoster();
+    const filter = this.activeRosterFilter();
+    if (filter === 'all' && !this.rosterExpanded()) {
+      return list.slice(0, 4);
+    }
+    return list;
+  });
+
   protected setRosterFilter(filter: string): void {
     this.activeRosterFilter.set(filter);
+    this.rosterExpanded.set(false);
+  }
+
+  protected toggleRosterExpand(): void {
+    const isExpanding = !this.rosterExpanded();
+    this.rosterExpanded.set(isExpanding);
+
+    if (!isExpanding && typeof document !== 'undefined') {
+      setTimeout(() => {
+        const section = document.getElementById('sklad');
+        section?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 0);
+    }
   }
 
   protected positionLabel(position: PlayerPosition | string): string {
@@ -223,6 +486,31 @@ export class HomeView implements OnInit {
     this.failedTeamLogos.update((set) => {
       const updated = new Set(set);
       updated.add(teamName);
+      return updated;
+    });
+  }
+
+  protected readonly partners: PartnerItem[] = [
+    { id: 'partner-multitour', name: 'Multitour', logoFilename: 'multitour_logo.png' },
+    { id: 'partner-sp3', name: 'SP3 w Środzie Śląskiej', logoFilename: 'sp3_logo.png' },
+  ];
+
+  protected readonly failedPartnerLogos = signal<Set<string>>(new Set());
+
+  protected partnerLogoUrl(filename: string): string {
+    if (!filename) return '';
+    const base = ASSETS_CDN_URL ? ASSETS_CDN_URL.replace(/\/$/, '') : '';
+    return `${base}/partners/${encodeURIComponent(filename)}`;
+  }
+
+  protected hasPartnerLogo(partnerId: string): boolean {
+    return !this.failedPartnerLogos().has(partnerId);
+  }
+
+  protected onPartnerLogoError(partnerId: string): void {
+    this.failedPartnerLogos.update((set) => {
+      const updated = new Set(set);
+      updated.add(partnerId);
       return updated;
     });
   }

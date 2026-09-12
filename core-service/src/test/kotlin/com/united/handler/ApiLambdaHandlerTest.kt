@@ -398,4 +398,52 @@ class ApiLambdaHandlerTest {
         assertEquals(200, response.statusCode)
         assert(response.body.contains("soft-deleted successfully"))
     }
+
+    @Test
+    fun `should parse roster_seed json correctly with 21 roster members`() {
+        val stream = javaClass.classLoader.getResourceAsStream("roster_seed.json")
+        org.junit.jupiter.api.Assertions.assertNotNull(stream)
+        val mapper = com.fasterxml.jackson.module.kotlin.jacksonObjectMapper()
+        val rootNode = mapper.readTree(stream)
+        val leagueData = rootNode.get("LeagueData-Prod") ?: rootNode.get("LeagueDataProd") ?: rootNode.get("LeagueData")
+        org.junit.jupiter.api.Assertions.assertNotNull(leagueData)
+        val players = leagueData.mapNotNull { entry ->
+            val item = entry.get("PutRequest")?.get("Item") ?: return@mapNotNull null
+            val id = item.get("id")?.get("S")?.asText() ?: return@mapNotNull null
+            val firstName = item.get("firstName")?.get("S")?.asText() ?: ""
+            val lastName = item.get("lastName")?.get("S")?.asText() ?: ""
+            val posStr = item.get("position")?.get("S")?.asText()
+            val number = item.get("number")?.get("N")?.asInt() ?: 0
+            val height = item.get("height")?.get("N")?.asInt()
+            val attackRange = item.get("attackRange")?.get("N")?.asInt()
+            val age = item.get("age")?.get("N")?.asInt()
+            val isCaptain = item.get("isCaptain")?.get("BOOL")?.asBoolean() ?: false
+
+            com.united.model.PlayerItem(
+                id = id,
+                firstName = firstName,
+                lastName = lastName,
+                position = com.united.model.PlayerPosition.fromString(posStr),
+                number = number,
+                height = height,
+                attackRange = attackRange,
+                age = age,
+                isCaptain = isCaptain
+            )
+        }
+        assertEquals(21, players.size)
+        assert(players.all { it.height == null })
+        assert(players.all { it.attackRange == null })
+        val captain = players.first { it.isCaptain }
+        assertEquals("Bartosz", captain.firstName)
+        assertEquals("Korta", captain.lastName)
+        assertEquals(3, captain.number)
+        assertEquals(26, captain.age)
+
+        val coach = players.first { it.position == com.united.model.PlayerPosition.COACH }
+        assertEquals("Patrycja", coach.firstName)
+        assertEquals("Grzech", coach.lastName)
+        assertEquals(0, coach.number)
+        assertEquals(22, coach.age)
+    }
 }

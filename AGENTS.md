@@ -10,7 +10,7 @@ This repository contains the full-stack web platform for the **United Środa Śl
   - **Framework**: Angular 20+ (Standalone components, Angular Signals, SCSS, `@angular/build:application`).
   - **Styles**: Custom dark neon-green athletic design, CSS variables (`--color-accent-neon: #00e65b`), geometric Outfit font.
   - **Config**: Environment files in `src/environments/` (`environment.ts` for prod, `environment.development.ts` for dev).
-  - **Assets**: Delivered via Amazon CloudFront CDN (`https://d1rm5h55nlqrob.cloudfront.net/roster/{id}.png` and `logos/{team}.png`).
+  - **Assets**: Delivered via Amazon CloudFront CDN (Production: `https://d1rm5h55nlqrob.cloudfront.net`, Development: `https://dxrcawhjt411l.cloudfront.net`).
 
 - **`core-service/`** (Backend REST API):
   - **Runtime**: Kotlin 2 / Java 21 on AWS Lambda (API Gateway V2 HTTP API payload format 2.0).
@@ -20,10 +20,10 @@ This repository contains the full-stack web platform for the **United Środa Śl
 
 - **`common/`** (Shared Library):
   - Shared domain models (`MatchItem`, `PlayerItem`, `TeamStanding`, `PlayerPosition`).
-  - `DynamoRepository`: Coroutines-based AWS SDK for Kotlin client managing `LeagueData` DynamoDB table.
+  - `DynamoRepository`: Coroutines-based AWS SDK for Kotlin client managing `LeagueData-Prod` DynamoDB table.
 
 - **`scraper-lambda/`** (Scraper Service):
-  - AWS Lambda function running JSoup to scrape official DZPS volleyball league tables, matches, and results into DynamoDB.
+  - AWS Lambda function `united-scraper-prod` running JSoup to scrape official DZPS volleyball league tables, matches, and results into DynamoDB (`LeagueData-Prod`). Triggered via EventBridge schedules.
 
 - **`infrastructure/`** (IaC):
   - Terraform declarations for Lambda, API Gateway HTTP API, DynamoDB policies, S3 Assets bucket, and CloudFront CDN with Origin Access Control (OAC).

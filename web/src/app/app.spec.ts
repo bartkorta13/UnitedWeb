@@ -264,7 +264,7 @@ describe('HomeView', () => {
     expect(formattedDate).toBe('Sobota, 3 Października 2026');
   });
 
-  it('should toggle hero avatar and display standing rank and MSC when clicked', () => {
+  it('should toggle hero avatar and display standing rank and miejsce when clicked', () => {
     const fixture = TestBed.createComponent(App);
     const app = fixture.componentInstance;
     const api = TestBed.inject(LeagueApiService);
@@ -300,13 +300,13 @@ describe('HomeView', () => {
 
     api.fixtures.set([
       {
-        matchId: '100',
-        date: '2026-10-03',
+        matchId: '101',
+        date: '2026-10-10',
+        hour: '18:00',
         homeTeamName: 'United_Środa_Śląska',
         awayTeamName: 'Rywal_Jawor',
         score: '',
         isFinished: false,
-        hour: '17:00',
       },
     ]);
 
@@ -346,7 +346,7 @@ describe('HomeView', () => {
     // Away is flipped
     expect(avatarButtons[1].classList.contains('is-flipped')).toBeTrue();
     expect(avatarButtons[1].querySelector('.standing-rank-num')?.textContent?.trim().replace(/\s+/g, '')).toBe('#6');
-    expect(avatarButtons[1].querySelector('.standing-rank-label')?.textContent?.trim()).toBe('MSC');
+    expect(avatarButtons[1].querySelector('.standing-rank-label')?.textContent?.trim()).toBe('miejsce');
 
     // Clicking home button in DOM toggles it
     avatarButtons[0].click();
@@ -354,7 +354,150 @@ describe('HomeView', () => {
     expect(app['heroHomeFlipped']()).toBeTrue();
     expect(avatarButtons[0].classList.contains('is-flipped')).toBeTrue();
     expect(avatarButtons[0].querySelector('.standing-rank-num')?.textContent?.trim().replace(/\s+/g, '')).toBe('#1');
-    expect(avatarButtons[0].querySelector('.standing-rank-label')?.textContent?.trim()).toBe('MSC');
+    expect(avatarButtons[0].querySelector('.standing-rank-label')?.textContent?.trim()).toBe('miejsce');
+  });
+
+  describe('Countdown do najbliższego meczu (Featured Next Match)', () => {
+    it('should calculate target date to exact hour when hour is provided', () => {
+      const fixture = TestBed.createComponent(App);
+      const app = fixture.componentInstance;
+
+      const matchWithHour: MatchItem = {
+        matchId: '1',
+        date: '2026-10-17',
+        hour: '18:00',
+        homeTeamName: 'United_Środa_Śląska',
+        awayTeamName: 'Rywal_Jawor',
+        score: '',
+        isFinished: false,
+      };
+
+      const target = app['getCountdownTargetDate'](matchWithHour);
+      expect(target).not.toBeNull();
+      expect(target?.getFullYear()).toBe(2026);
+      expect(target?.getMonth()).toBe(9); // October is index 9
+      expect(target?.getDate()).toBe(17);
+      expect(target?.getHours()).toBe(18);
+      expect(target?.getMinutes()).toBe(0);
+    });
+
+    it('should calculate target date to 12:00 on match day when hour is not provided', () => {
+      const fixture = TestBed.createComponent(App);
+      const app = fixture.componentInstance;
+
+      const matchWithoutHour: MatchItem = {
+        matchId: '2',
+        date: '2026-10-24',
+        hour: '',
+        homeTeamName: 'United_Środa_Śląska',
+        awayTeamName: 'Rywal_Jawor',
+        score: '',
+        isFinished: false,
+      };
+
+      const target = app['getCountdownTargetDate'](matchWithoutHour);
+      expect(target).not.toBeNull();
+      expect(target?.getFullYear()).toBe(2026);
+      expect(target?.getMonth()).toBe(9);
+      expect(target?.getDate()).toBe(24);
+      expect(target?.getHours()).toBe(12);
+      expect(target?.getMinutes()).toBe(0);
+    });
+
+    it('should compute countdown components accurately with 2-digit padding', () => {
+      const fixture = TestBed.createComponent(App);
+      const app = fixture.componentInstance;
+      const api = TestBed.inject(LeagueApiService);
+
+      const match: MatchItem = {
+        matchId: '3',
+        date: '2026-10-20',
+        hour: '15:30',
+        homeTeamName: 'United_Środa_Śląska',
+        awayTeamName: 'Rywal_Jawor',
+        score: '',
+        isFinished: false,
+      };
+      api.fixtures.set([match]);
+      fixture.detectChanges();
+
+      // Mock now: 2 days, 3 hours, 4 minutes, 5 seconds before 2026-10-20 15:30:00
+      const targetDate = new Date(2026, 9, 20, 15, 30, 0, 0);
+      const mockNow = targetDate.getTime() - (2 * 86400 + 3 * 3600 + 4 * 60 + 5) * 1000;
+
+      const countdown = app['computeCountdown'](mockNow);
+      expect(countdown.days).toBe('02');
+      expect(countdown.hours).toBe('03');
+      expect(countdown.minutes).toBe('04');
+      expect(countdown.seconds).toBe('05');
+      expect(countdown.isExpired).toBeFalse();
+    });
+
+    it('should handle past or expired matches gracefully', () => {
+      const fixture = TestBed.createComponent(App);
+      const app = fixture.componentInstance;
+      const api = TestBed.inject(LeagueApiService);
+
+      const match: MatchItem = {
+        matchId: '4',
+        date: '2026-10-01',
+        hour: '12:00',
+        homeTeamName: 'United_Środa_Śląska',
+        awayTeamName: 'Rywal_Jawor',
+        score: '',
+        isFinished: false,
+      };
+      api.fixtures.set([match]);
+      fixture.detectChanges();
+
+      // Now is after the match
+      const mockNow = new Date(2026, 9, 2, 12, 0, 0, 0).getTime();
+      const countdown = app['computeCountdown'](mockNow);
+      expect(countdown.days).toBe('00');
+      expect(countdown.hours).toBe('00');
+      expect(countdown.minutes).toBe('00');
+      expect(countdown.seconds).toBe('00');
+      expect(countdown.isExpired).toBeTrue();
+    });
+
+    it('should render countdown card in the DOM when next match is present', () => {
+      const fixture = TestBed.createComponent(App);
+      const app = fixture.componentInstance;
+      const api = TestBed.inject(LeagueApiService);
+
+      api.fixtures.set([
+        {
+          matchId: '5',
+          date: '2026-11-01',
+          hour: '17:00',
+          homeTeamName: 'United_Środa_Śląska',
+          awayTeamName: 'Rywal_Jawor',
+          score: '',
+          isFinished: false,
+        },
+      ]);
+      fixture.detectChanges();
+
+      const countdownEl = fixture.nativeElement.querySelector('.match-countdown-compact');
+      expect(countdownEl).toBeTruthy();
+      const digits = countdownEl.querySelectorAll('.c-digit');
+      expect(digits.length).toBe(4);
+      const units = countdownEl.querySelectorAll('.c-unit');
+      expect(units.length).toBe(4);
+      expect(units[0].textContent.trim()).toBe('d');
+      expect(units[1].textContent.trim()).toBe('h');
+      expect(units[2].textContent.trim()).toBe('m');
+      expect(units[3].textContent.trim()).toBe('s');
+    });
+
+    it('should clean up timer on component destroy', () => {
+      const fixture = TestBed.createComponent(App);
+      const app = fixture.componentInstance;
+      expect(app['countdownTimer']).toBeDefined();
+
+      app.ngOnDestroy();
+      expect(app['countdownTimer']).toBeNull();
+    });
   });
 
   describe('Nadchodzące mecze - Match card stats comparison', () => {
@@ -1353,17 +1496,457 @@ describe('HomeView', () => {
       expect(svg?.getAttribute('viewBox')).toBe('0 0 200 240');
     });
 
-    it('should show empty state message when roster is empty', () => {
+    it('should show empty state message when roster is empty, and spinner when loading', () => {
       const fixture = TestBed.createComponent(App);
       const api = TestBed.inject(LeagueApiService);
-      api.loading.set(false);
+      api.loading.set(true);
       api.roster.set([]);
 
+      fixture.detectChanges();
+
+      const loadingEmptyState = fixture.nativeElement.querySelector('#sklad .roster-empty-state');
+      expect(loadingEmptyState).toBeTruthy();
+      expect(loadingEmptyState.querySelector('.spinner')).toBeTruthy();
+
+      api.loading.set(false);
       fixture.detectChanges();
 
       const emptyState = fixture.nativeElement.querySelector('#sklad .roster-empty-state');
       expect(emptyState).toBeTruthy();
       expect(emptyState.textContent).toContain('Skład drużyny na ten sezon zostanie wkrótce opublikowany');
+    });
+
+    it('should show cohesive spinner loaders in upcoming matches (#mecze) and recent results (#wyniki) when loading', () => {
+      const fixture = TestBed.createComponent(App);
+      const api = TestBed.inject(LeagueApiService);
+      api.loading.set(true);
+      api.fixtures.set([]);
+      api.results.set([]);
+
+      fixture.detectChanges();
+
+      const fixturesLoader = fixture.nativeElement.querySelector('#mecze .data-loading-state');
+      expect(fixturesLoader).toBeTruthy();
+      expect(fixturesLoader.querySelector('.spinner')).toBeTruthy();
+      expect(fixturesLoader.textContent).toContain('Trwa ładowanie terminarza spotkań...');
+
+      const resultsLoader = fixture.nativeElement.querySelector('#wyniki .data-loading-state');
+      expect(resultsLoader).toBeTruthy();
+      expect(resultsLoader.querySelector('.spinner')).toBeTruthy();
+      expect(resultsLoader.textContent).toContain('Trwa ładowanie wyników spotkań...');
+    });
+
+    it('should show only 4 players on start for Wszyscy, expand all players, and show all for position filters', () => {
+      const fixture = TestBed.createComponent(App);
+      const app = fixture.componentInstance;
+      const api = TestBed.inject(LeagueApiService);
+
+      const sixPlayers = [
+        { id: 'p1', firstName: 'P1', lastName: 'L1', position: 'SETTER' as const, number: 1 },
+        { id: 'p2', firstName: 'P2', lastName: 'L2', position: 'SETTER' as const, number: 2 },
+        { id: 'p3', firstName: 'P3', lastName: 'L3', position: 'OUTSIDE' as const, number: 3 },
+        { id: 'p4', firstName: 'P4', lastName: 'L4', position: 'OUTSIDE' as const, number: 4 },
+        { id: 'p5', firstName: 'P5', lastName: 'L5', position: 'SETTER' as const, number: 5 },
+        { id: 'p6', firstName: 'P6', lastName: 'L6', position: 'SETTER' as const, number: 6 },
+      ];
+
+      api.roster.set(sixPlayers);
+      fixture.detectChanges();
+
+      // On start with 'all' filter: only 4 players visible
+      expect(app['visibleRoster']().length).toBe(4);
+      expect(app['rosterExpanded']()).toBeFalse();
+
+      const section = fixture.nativeElement.querySelector('#sklad');
+      expect(section.querySelector('.section-title').textContent).toContain('ZESPOŁU');
+      expect(section.querySelectorAll('.player-card').length).toBe(4);
+
+      // Expand button is present
+      const expandBtn = section.querySelector('.btn-expand');
+      expect(expandBtn).toBeTruthy();
+      expect(expandBtn.textContent).toContain('Rozwiń wszystkich zawodników (6)');
+
+      // Expand all
+      app['toggleRosterExpand']();
+      fixture.detectChanges();
+
+      expect(app['visibleRoster']().length).toBe(6);
+      expect(section.querySelectorAll('.player-card').length).toBe(6);
+      expect(section.querySelector('.btn-expand').textContent).toContain('Zwiń zawodników');
+
+      // Filter by SETTER (there are 4 setters: p1, p2, p5, p6)
+      app['setRosterFilter']('SETTER');
+      fixture.detectChanges();
+
+      expect(app['visibleRoster']().length).toBe(4);
+      // Expand button is hidden in position filters
+      expect(section.querySelector('.btn-expand')).toBeNull();
+
+      // Switch back to 'all': should be collapsed back to 4
+      app['setRosterFilter']('all');
+      fixture.detectChanges();
+
+      expect(app['visibleRoster']().length).toBe(4);
+      expect(app['rosterExpanded']()).toBeFalse();
+    });
+  });
+
+  describe('Partners & Contact Sections', () => {
+    it('should construct partner logo URLs correctly', () => {
+      const fixture = TestBed.createComponent(App);
+      const app = fixture.componentInstance;
+
+      expect(app['partnerLogoUrl']('')).toBe('');
+      expect(app['partnerLogoUrl']('partner1.png')).toBe('https://d1rm5h55nlqrob.cloudfront.net/partners/partner1.png');
+      expect(app['partnerLogoUrl']('partner2.png')).toBe('https://d1rm5h55nlqrob.cloudfront.net/partners/partner2.png');
+    });
+
+    it('should track failed partner logos and switch to placeholder', () => {
+      const fixture = TestBed.createComponent(App);
+      const app = fixture.componentInstance;
+
+      expect(app['hasPartnerLogo']('partner-1')).toBeTrue();
+      app['onPartnerLogoError']('partner-1');
+      expect(app['hasPartnerLogo']('partner-1')).toBeFalse();
+      expect(app['hasPartnerLogo']('partner-2')).toBeTrue();
+    });
+
+    it('should render Dla Partnerów section with headline, Wspierają Nas and partner cards', () => {
+      const fixture = TestBed.createComponent(App);
+      fixture.detectChanges();
+
+      const el = fixture.nativeElement as HTMLElement;
+      const partnersSection = el.querySelector('#partnerzy');
+      expect(partnersSection).toBeTruthy();
+
+      expect(partnersSection?.textContent).toContain('LET\'S UNITE!');
+      expect(partnersSection?.textContent).toContain('WSPÓLNIE');
+      expect(partnersSection?.textContent).toContain('PO SUKCES');
+      expect(partnersSection?.textContent).toContain('Wspierają Nas');
+
+      const columns = partnersSection?.querySelectorAll('.partners-col');
+      expect(columns?.length).toBe(2);
+
+      const ctaBtn = partnersSection?.querySelector('a.btn-partner-cta[href="mailto:united.srodaslaska@gmail.com"]');
+      expect(ctaBtn).toBeTruthy();
+      expect(ctaBtn?.textContent).toContain('Napisz do nas');
+
+      const cards = partnersSection?.querySelectorAll('.partner-card');
+      expect(cards?.length).toBe(2);
+
+      const firstImg = cards?.[0]?.querySelector('img.partner-logo-img') as HTMLImageElement;
+      expect(firstImg).toBeTruthy();
+      expect(firstImg.src).toContain('partners/multitour_logo.png');
+
+      // Test fallback on error
+      firstImg.dispatchEvent(new Event('error'));
+      fixture.detectChanges();
+
+      expect(cards?.[0]?.querySelector('img.partner-logo-img')).toBeNull();
+      expect(cards?.[0]?.querySelector('.partner-placeholder')).toBeTruthy();
+    });
+
+    it('should render Kontakt section with mail link, address and social buttons without redundant CTA button', () => {
+      const fixture = TestBed.createComponent(App);
+      fixture.detectChanges();
+
+      const el = fixture.nativeElement as HTMLElement;
+      const contactSection = el.querySelector('#kontakt');
+      expect(contactSection).toBeTruthy();
+
+      expect(contactSection?.textContent).toContain('NAPISZ');
+      expect(contactSection?.textContent).toContain('DO NAS');
+      expect(contactSection?.textContent).toContain('united.srodaslaska@gmail.com');
+      expect(contactSection?.textContent).toContain('Hala Sportowa przy Szkole Podstawowej nr 3');
+      expect(contactSection?.textContent).toContain('ul. Górna 1, 55-300 Środa Śląska');
+
+      const fbLink = contactSection?.querySelector('a.btn-facebook') as HTMLAnchorElement;
+      expect(fbLink).toBeTruthy();
+      expect(fbLink.href).toBe('https://www.facebook.com/people/United-%C5%9Aroda-%C5%9Al%C4%85ska/61590726986782/');
+      expect(fbLink.target).toBe('_blank');
+
+      const igLink = contactSection?.querySelector('a.btn-instagram') as HTMLAnchorElement;
+      expect(igLink).toBeTruthy();
+      expect(igLink.href).toBe('https://www.instagram.com/united_sroda_slaska/');
+      expect(igLink.target).toBe('_blank');
+
+      const mailLink = contactSection?.querySelector('a.mail-link[href="mailto:united.srodaslaska@gmail.com"]');
+      expect(mailLink).toBeTruthy();
+
+      const redundantBtn = contactSection?.querySelector('.contact-action');
+      expect(redundantBtn).toBeNull();
+    });
+  });
+
+  describe('About Club Section - Swipeable Kafelki (O Nas)', () => {
+    it('should initialize with default active step 1 (2026) and 3 club history cards', () => {
+      const fixture = TestBed.createComponent(App);
+      const app = fixture.componentInstance;
+      fixture.detectChanges();
+
+      expect(app['activeClubStep']()).toBe(1);
+      expect(app['clubCards'].length).toBe(3);
+      expect(app['getClubCardPosition'](0)).toBe('pos-left');
+      expect(app['getClubCardPosition'](1)).toBe('pos-center');
+      expect(app['getClubCardPosition'](2)).toBe('pos-right');
+    });
+
+    it('should render 3 cards and swipe hint in the DOM without pagination dots', () => {
+      const fixture = TestBed.createComponent(App);
+      fixture.detectChanges();
+
+      const el = fixture.nativeElement as HTMLElement;
+      const clubSection = el.querySelector('#klub');
+      expect(clubSection).toBeTruthy();
+
+      const cards = clubSection?.querySelectorAll('.club-select-card');
+      expect(cards?.length).toBe(3);
+
+      const dots = clubSection?.querySelectorAll('.pagination-dot');
+      expect(dots?.length).toBe(0);
+
+      // Card 1 (idx 1) is active
+      expect(cards?.[1].classList.contains('pos-center')).toBeTrue();
+
+      // Swipe hint is present with exact text
+      const hint = clubSection?.querySelector('.club-swipe-hint');
+      expect(hint).toBeTruthy();
+      expect(hint?.textContent).toContain('Przeciągnij myszką lub przesuń palcem');
+    });
+
+    it('should cycle next and previous club steps', () => {
+      const fixture = TestBed.createComponent(App);
+      const app = fixture.componentInstance;
+
+      expect(app['activeClubStep']()).toBe(1);
+
+      app['nextClubStep']();
+      expect(app['activeClubStep']()).toBe(2);
+
+      app['nextClubStep']();
+      expect(app['activeClubStep']()).toBe(0);
+
+      app['prevClubStep']();
+      expect(app['activeClubStep']()).toBe(2);
+
+      app['prevClubStep']();
+      expect(app['activeClubStep']()).toBe(1);
+    });
+
+    it('should switch cards when cards are clicked directly', () => {
+      const fixture = TestBed.createComponent(App);
+      const app = fixture.componentInstance;
+      fixture.detectChanges();
+
+      const el = fixture.nativeElement as HTMLElement;
+      const cards = el.querySelectorAll('#klub .club-select-card');
+      expect(cards.length).toBe(3);
+
+      // Click card 0 (2025)
+      (cards[0] as HTMLElement).click();
+      fixture.detectChanges();
+      expect(app['activeClubStep']()).toBe(0);
+      expect(cards[0].classList.contains('pos-center')).toBeTrue();
+
+      // Click card 2 (2027)
+      (cards[2] as HTMLElement).click();
+      fixture.detectChanges();
+      expect(app['activeClubStep']()).toBe(2);
+      expect(cards[2].classList.contains('pos-center')).toBeTrue();
+    });
+
+    it('should switch cards when a pointerdown and pointerup occur without drag (tap/click)', () => {
+      const fixture = TestBed.createComponent(App);
+      const app = fixture.componentInstance;
+      fixture.detectChanges();
+
+      expect(app['activeClubStep']()).toBe(1);
+
+      // Pointer down on next card (step 2)
+      app['onClubPointerDown']({
+        button: 0,
+        pointerId: 10,
+        pointerType: 'mouse',
+        clientX: 200,
+        clientY: 100,
+      } as any);
+
+      // Pointer up without moving
+      app['onClubPointerUp']({
+        pointerId: 10,
+      } as any);
+
+      // Card click executes
+      app['onClubCardClick'](2);
+      expect(app['activeClubStep']()).toBe(2);
+    });
+
+    it('should swipe to next card on strong left pointer drag', () => {
+      const fixture = TestBed.createComponent(App);
+      const app = fixture.componentInstance;
+      fixture.detectChanges();
+
+      expect(app['activeClubStep']()).toBe(1);
+
+      // Start drag at x=200, y=100
+      app['onClubPointerDown']({
+        button: 0,
+        pointerId: 1,
+        pointerType: 'touch',
+        clientX: 200,
+        clientY: 100,
+        currentTarget: null,
+      } as any);
+
+      expect(app['isDraggingClub']()).toBeFalse();
+
+      // Move left by 80px (clientX = 120)
+      app['onClubPointerMove']({
+        pointerId: 1,
+        clientX: 120,
+        clientY: 102,
+      } as any);
+
+      expect(app['isDraggingClub']()).toBeTrue();
+      expect(app['clubDragOffset']()).toBe(-80);
+
+      // Release pointer
+      app['onClubPointerUp']({
+        pointerId: 1,
+        currentTarget: null,
+      } as any);
+
+      expect(app['isDraggingClub']()).toBeFalse();
+      expect(app['clubDragOffset']()).toBe(0);
+      // Dragging left advances to next card (step 2)
+      expect(app['activeClubStep']()).toBe(2);
+    });
+
+    it('should swipe to previous card on strong right pointer drag', () => {
+      const fixture = TestBed.createComponent(App);
+      const app = fixture.componentInstance;
+      fixture.detectChanges();
+
+      expect(app['activeClubStep']()).toBe(1);
+
+      // Start drag at x=200, y=100
+      app['onClubPointerDown']({
+        button: 0,
+        pointerId: 2,
+        pointerType: 'mouse',
+        clientX: 200,
+        clientY: 100,
+        currentTarget: null,
+      } as any);
+
+      // Move right by 80px (clientX = 280)
+      app['onClubPointerMove']({
+        pointerId: 2,
+        clientX: 280,
+        clientY: 100,
+      } as any);
+
+      expect(app['isDraggingClub']()).toBeTrue();
+      expect(app['clubDragOffset']()).toBe(80);
+
+      // Release pointer
+      app['onClubPointerUp']({
+        pointerId: 2,
+        currentTarget: null,
+      } as any);
+
+      expect(app['isDraggingClub']()).toBeFalse();
+      expect(app['clubDragOffset']()).toBe(0);
+      // Dragging right goes to previous card (step 0)
+      expect(app['activeClubStep']()).toBe(0);
+    });
+
+    it('should snap back without changing card if drag distance is below threshold', () => {
+      const fixture = TestBed.createComponent(App);
+      const app = fixture.componentInstance;
+      fixture.detectChanges();
+
+      expect(app['activeClubStep']()).toBe(1);
+
+      // Small drag 15px
+      app['onClubPointerDown']({
+        button: 0,
+        pointerId: 3,
+        pointerType: 'mouse',
+        clientX: 200,
+        clientY: 100,
+        currentTarget: null,
+      } as any);
+
+      app['onClubPointerMove']({
+        pointerId: 3,
+        clientX: 185,
+        clientY: 100,
+      } as any);
+
+      app['onClubPointerUp']({
+        pointerId: 3,
+        currentTarget: null,
+      } as any);
+
+      expect(app['activeClubStep']()).toBe(1);
+      expect(app['clubDragOffset']()).toBe(0);
+    });
+
+    it('should cancel horizontal drag when vertical scroll is detected', () => {
+      const fixture = TestBed.createComponent(App);
+      const app = fixture.componentInstance;
+      fixture.detectChanges();
+
+      app['onClubPointerDown']({
+        button: 0,
+        pointerId: 4,
+        pointerType: 'touch',
+        clientX: 200,
+        clientY: 100,
+        currentTarget: null,
+      } as any);
+
+      // Move vertically by 30px, horizontal only 2px
+      app['onClubPointerMove']({
+        pointerId: 4,
+        clientX: 202,
+        clientY: 130,
+      } as any);
+
+      // Should recognize as vertical scroll, not card drag
+      expect(app['isDraggingClub']()).toBeFalse();
+      expect(app['clubDragOffset']()).toBe(0);
+    });
+
+    it('should navigate using keyboard arrow keys', () => {
+      const fixture = TestBed.createComponent(App);
+      const app = fixture.componentInstance;
+
+      expect(app['activeClubStep']()).toBe(1);
+
+      const rightEvent = new KeyboardEvent('keydown', { key: 'ArrowRight' });
+      app['onClubKeyDown'](rightEvent);
+      expect(app['activeClubStep']()).toBe(2);
+
+      const leftEvent = new KeyboardEvent('keydown', { key: 'ArrowLeft' });
+      app['onClubKeyDown'](leftEvent);
+      expect(app['activeClubStep']()).toBe(1);
+    });
+
+    it('should respond to horizontal wheel/trackpad swipe', () => {
+      const fixture = TestBed.createComponent(App);
+      const app = fixture.componentInstance;
+
+      expect(app['activeClubStep']()).toBe(1);
+
+      // Swipe trackpad left (deltaX > 0)
+      app['onClubWheel']({
+        deltaX: 50,
+        deltaY: 5,
+      } as any);
+
+      expect(app['activeClubStep']()).toBe(2);
     });
   });
 });

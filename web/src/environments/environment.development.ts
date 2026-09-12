@@ -1,8 +1,9 @@
 export const environment = {
   production: false,
-  // Skierowane na lokalne API (./gradlew :core-service:run)
+  // Development local API (./gradlew :core-service:run)
   apiUrl: 'http://localhost:8080',
-  cdnUrl: 'https://d1rm5h55nlqrob.cloudfront.net',
+  // Development CloudFront CDN for media assets (photos & logos)
+  cdnUrl: 'https://dxrcawhjt411l.cloudfront.net',
   unitedTeamName: 'United_Środa_Śląska',
   cognito: {
     region: 'eu-central-1',

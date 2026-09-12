@@ -44,4 +44,22 @@ describe('App (Shell)', () => {
     expect(app['teamLogoUrl']('')).toBe('');
     expect(app['teamLogoUrl']('United_Środa_Śląska')).toContain('logos/United_%C5%9Aroda_%C5%9Al%C4%85ska_logo.png');
   });
+
+  it('should have Zespół and Dla Partnerów in navbar and footer, and not have Skład or Najbliższy mecz', () => {
+    const fixture = TestBed.createComponent(App);
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    const navText = compiled.querySelector('nav')?.textContent ?? '';
+    const footerText = compiled.querySelector('.site-footer')?.textContent ?? '';
+
+    expect(navText).toContain('Zespół');
+    expect(navText).not.toContain('Skład');
+    expect(navText).toContain('Dla Partnerów');
+    expect(navText).not.toContain('Najbliższy mecz');
+
+    expect(footerText).toContain('Zespół');
+    expect(footerText).not.toContain('Skład');
+    expect(footerText).toContain('Dla Partnerów');
+  });
 });

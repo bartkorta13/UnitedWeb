@@ -62,7 +62,7 @@
 
       <!-- HERO RIGHT: Featured Next Match Card -->
       <div class="hero-right">
-        <aside class="featured-match-showcase">
+        <aside class="featured-match-showcase" aria-label="Najbliższy mecz">
           <div class="card-glow-border"></div>
 
           <div class="showcase-header">
@@ -79,11 +79,31 @@
 
           @if (nextMatch(); as match) {
             <div class="showcase-date">
-              <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16" class="calendar-icon">
-                <path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd" />
-              </svg>
-              <span class="showcase-date-text">{{ formatHeroDate(match) }}</span>
+              <div class="date-info-cluster">
+                <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16" class="calendar-icon" aria-hidden="true">
+                  <path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd" />
+                </svg>
+                <span class="showcase-date-text">{{ formatHeroDate(match) }}</span>
+              </div>
               <span class="match-time-tag" [class.no-time]="!hasSpecificTime(match)">{{ matchHeroHour(match) }}</span>
+            </div>
+
+            <!-- Dynamic Compact Countdown -->
+            <div class="match-countdown-compact" aria-label="Odliczanie do meczu">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="countdown-clock-icon" aria-hidden="true">
+                <circle cx="12" cy="12" r="10" />
+                <polyline points="12 6 12 12 16 14" />
+              </svg>
+              <span class="countdown-label">DO MECZU:</span>
+              <div class="countdown-timer-values">
+                <span class="c-segment"><strong class="c-digit">{{ countdown().days }}</strong><small class="c-unit">d</small></span>
+                <span class="c-sep">:</span>
+                <span class="c-segment"><strong class="c-digit">{{ countdown().hours }}</strong><small class="c-unit">h</small></span>
+                <span class="c-sep">:</span>
+                <span class="c-segment"><strong class="c-digit">{{ countdown().minutes }}</strong><small class="c-unit">m</small></span>
+                <span class="c-sep">:</span>
+                <span class="c-segment"><strong class="c-digit">{{ countdown().seconds }}</strong><small class="c-unit">s</small></span>
+              </div>
             </div>
 
             <div class="matchup-duel">
@@ -92,10 +112,12 @@
                 <button
                   type="button"
                   class="team-avatar"
+                  [class.is-united]="isHome(match)"
+                  [class.is-opponent]="!isHome(match)"
                   [class.is-flipped]="heroHomeFlipped()"
                   [class.is-top4]="isTeamTopFour(match.homeTeamName)"
                   (click)="toggleHeroAvatar('home')"
-                  [title]="heroHomeFlipped() ? 'Kliknij, aby pokazać logo' : 'Kliknij, aby zobaczyć miejsce w tabeli'"
+                  [title]="heroHomeFlipped() ? 'Pokaż logo zespołu' : 'Pokaż miejsce w tabeli'"
                   [attr.aria-label]="heroHomeFlipped() ? 'Pokaż logo zespołu' : 'Pokaż miejsce w tabeli'"
                 >
                   <div class="avatar-flip-card">
@@ -104,6 +126,7 @@
                         [src]="teamLogoUrl(match.homeTeamName)"
                         [alt]="teamName(match.homeTeamName)"
                         class="avatar-logo-img"
+                        draggable="false"
                         (error)="$any($event.target).style.display = 'none'"
                       />
                       @if (isHome(match)) {
@@ -116,7 +139,7 @@
                       <span class="standing-rank-num">
                         <span class="rank-hash">#</span>{{ teamStandingRankNumber(match.homeTeamName) }}
                       </span>
-                      <span class="standing-rank-label">MSC</span>
+                      <span class="standing-rank-label">miejsce</span>
                     </div>
                   </div>
                 </button>
@@ -131,7 +154,6 @@
                 <div class="vs-circle">
                   <span>VS</span>
                 </div>
-                <div class="vs-beam"></div>
               </div>
 
               <!-- Team 2 -->
@@ -139,10 +161,12 @@
                 <button
                   type="button"
                   class="team-avatar"
+                  [class.is-united]="!isHome(match)"
+                  [class.is-opponent]="isHome(match)"
                   [class.is-flipped]="heroAwayFlipped()"
                   [class.is-top4]="isTeamTopFour(match.awayTeamName)"
                   (click)="toggleHeroAvatar('away')"
-                  [title]="heroAwayFlipped() ? 'Kliknij, aby pokazać logo' : 'Kliknij, aby zobaczyć miejsce w tabeli'"
+                  [title]="heroAwayFlipped() ? 'Pokaż logo zespołu' : 'Pokaż miejsce w tabeli'"
                   [attr.aria-label]="heroAwayFlipped() ? 'Pokaż logo zespołu' : 'Pokaż miejsce w tabeli'"
                 >
                   <div class="avatar-flip-card">
@@ -151,6 +175,7 @@
                         [src]="teamLogoUrl(match.awayTeamName)"
                         [alt]="teamName(match.awayTeamName)"
                         class="avatar-logo-img"
+                        draggable="false"
                         (error)="$any($event.target).style.display = 'none'"
                       />
                       @if (!isHome(match)) {
@@ -163,7 +188,7 @@
                       <span class="standing-rank-num">
                         <span class="rank-hash">#</span>{{ teamStandingRankNumber(match.awayTeamName) }}
                       </span>
-                      <span class="standing-rank-label">MSC</span>
+                      <span class="standing-rank-label">miejsce</span>
                     </div>
                   </div>
                 </button>
@@ -176,22 +201,22 @@
 
             <div class="showcase-footer">
               <div class="venue-info">
-                <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16" class="pin-icon">
+                <svg viewBox="0 0 20 20" fill="currentColor" width="13" height="13" class="pin-icon" aria-hidden="true">
                   <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd" />
                 </svg>
-                <span [title]="matchPlace(match, 'Hala Sportowa OSiR, Środa Śląska', 'Mecz na parkiecie rywala')">
-                  {{ matchPlace(match, 'Hala Sportowa OSiR, Środa Śląska', 'Mecz na parkiecie rywala') }}
+                <span class="venue-text" [title]="matchPlace(match, 'Hala OSiR, Środa Śl.', 'Mecz wyjazdowy')">
+                  {{ matchPlace(match, 'Hala OSiR, Środa Śl.', 'Mecz wyjazdowy') }}
                 </span>
               </div>
               <a href="#mecze" class="showcase-link">
-                <span>Pełny terminarz</span>
-                <span class="arrow">→</span>
+                <span>Terminarz</span>
+                <span class="arrow" aria-hidden="true">→</span>
               </a>
             </div>
           } @else if (loading()) {
             <div class="showcase-loading">
               <div class="spinner"></div>
-              <p>Pobieranie terminarza…</p>
+              <p>Trwa ładowanie najbliższego meczu...</p>
             </div>
           } @else {
             <div class="showcase-empty">
@@ -208,8 +233,8 @@
     <div class="section-container">
       <div class="section-header-block">
         <div class="header-titles">
-          <p class="section-eyebrow">AKTUALNOŚCI KLUBOWE</p>
-          <h2 class="section-title">NAJNOWSZE <span class="highlight-green">WIADOMOŚCI</span></h2>
+          <p class="section-eyebrow">NAJNOWSZE WIADOMOŚCI</p>
+          <h2 class="section-title">AKTUALNOŚCI <span class="highlight-green">KLUBOWE</span></h2>
           <p class="section-sub">Relacje meczowe, ogłoszenia oraz najważniejsze wydarzenia z życia United.</p>
         </div>
         <a routerLink="/aktualnosci" class="btn btn-outline-neon desktop-only">
@@ -231,6 +256,14 @@
             <app-news-card [news]="item"></app-news-card>
           }
         </div>
+        <div class="news-preview-cta mobile-only">
+          <a routerLink="/aktualnosci" class="btn btn-outline-neon">
+            <span>Wszystkie aktualności</span>
+            <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16">
+              <path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd" />
+            </svg>
+          </a>
+        </div>
       } @else {
         <div class="news-preview-empty">
           <p>Brak nowych wiadomości w tym momencie. Zapraszamy wkrótce!</p>
@@ -250,7 +283,13 @@
         </div>
       </div>
 
-      <div class="results-cards-list">
+      @if (loading() && results().length === 0) {
+        <div class="data-loading-state">
+          <div class="spinner"></div>
+          <p>Trwa ładowanie wyników spotkań...</p>
+        </div>
+      } @else {
+        <div class="results-cards-list">
         @for (result of visibleResults(); track result.matchId) {
           <article
             class="result-card"
@@ -406,6 +445,7 @@
           </button>
         </div>
       }
+      }
     </div>
   </section>
 
@@ -458,10 +498,9 @@
       }
 
       @if (loading() && fixtures().length === 0) {
-        <div class="fixtures-grid">
-          @for (i of [1,2,3,4,5,6]; track i) {
-            <div class="match-card skeleton-card"></div>
-          }
+        <div class="data-loading-state fixtures-loading-state">
+          <div class="spinner"></div>
+          <p>Trwa ładowanie terminarza spotkań...</p>
         </div>
       } @else {
         <div class="fixtures-grid">
@@ -882,8 +921,9 @@
               } @else {
                 <div class="player-silhouette">
                   <svg viewBox="0 0 200 240" fill="currentColor" class="player-svg" aria-hidden="true">
-                    <path d="M100,20 C125,20 142,36 142,62 C142,78 136,92 126,102 C118,110 110,114 100,114 C90,114 82,110 74,102 C64,92 58,78 58,62 C58,36 75,20 100,20 Z" />
-                    <path d="M76,118 L124,118 L128,130 C136,140 150,150 166,160 C180,170 190,184 194,204 L194,240 L6,240 L6,204 C10,184 20,170 34,160 C50,150 64,140 72,130 Z" />
+                    <!-- Clean, modern athletic silhouette (simplified head and shoulders) -->
+                    <circle cx="100" cy="72" r="38" />
+                    <path d="M12,240 C12,182 54,138 90,128 C93.5,127 96.5,126.5 100,126.5 C103.5,126.5 106.5,127 110,128 C146,138 188,182 188,240 Z" />
                   </svg>
                 </div>
               }
@@ -930,10 +970,38 @@
           </article>
         } @empty {
           <div class="roster-empty-state">
-            <p>{{ loading() ? 'Trwa ładowanie składu zespołu...' : 'Skład drużyny na ten sezon zostanie wkrótce opublikowany.' }}</p>
+            @if (loading()) {
+              <div class="spinner"></div>
+              <p>Trwa ładowanie składu zespołu...</p>
+            } @else {
+              <p>Skład drużyny na ten sezon zostanie wkrótce opublikowany.</p>
+            }
           </div>
         }
       </div>
+
+      @if (activeRosterFilter() === 'all' && filteredRoster().length > 4) {
+        <div class="expand-actions">
+          <button
+            type="button"
+            class="btn btn-glass btn-expand"
+            (click)="toggleRosterExpand()"
+            [attr.aria-expanded]="rosterExpanded()"
+          >
+            @if (!rosterExpanded()) {
+              <span>Rozwiń wszystkich zawodników ({{ filteredRoster().length }})</span>
+              <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16" class="expand-icon" aria-hidden="true">
+                <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+              </svg>
+            } @else {
+              <span>Zwiń zawodników</span>
+              <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16" class="expand-icon" aria-hidden="true">
+                <path fill-rule="evenodd" d="M14.707 12.707a1 1 0 01-1.414 0L10 9.414l-3.293 3.293a1 1 0 01-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 010 1.414z" clip-rule="evenodd" />
+              </svg>
+            }
+          </button>
+        </div>
+      }
     </div>
   </section>
 
@@ -950,20 +1018,18 @@
 
       <div
         class="club-card-selector"
-        (touchstart)="onClubTouchStart($event)"
-        (touchend)="onClubTouchEnd($event)"
+        [class.is-dragging]="isDraggingClub()"
+        (pointerdown)="onClubPointerDown($event)"
+        (pointermove)="onClubPointerMove($event)"
+        (pointerup)="onClubPointerUp($event)"
+        (pointercancel)="onClubPointerCancel($event)"
       >
         <div class="selector-stage">
           @for (card of clubCards; track card.id; let idx = $index) {
             <article
               class="club-select-card"
-              [ngClass]="[card.id, getClubCardPosition(idx)]"
-              (click)="setClubStep(idx)"
-              (keydown.enter)="setClubStep(idx)"
-              (keydown.space)="setClubStep(idx); $event.preventDefault()"
-              [attr.aria-selected]="activeClubStep() === idx"
-              role="button"
-              tabindex="0"
+              [ngClass]="getClubCardPosition(idx)"
+              (click)="onClubCardClick(idx)"
             >
               <div class="timeline-year-watermark" aria-hidden="true">{{ card.watermark }}</div>
               <div class="timeline-card-inner">
@@ -985,6 +1051,72 @@
             </article>
           }
         </div>
+        <div class="club-swipe-hint" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="swipe-hint-svg">
+            <path d="M7 16l-4-4m0 0l4-4m-4 4h18m-4 4l4-4m0 0l-4-4" />
+          </svg>
+          <span>Przeciągnij myszką lub przesuń palcem</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- DLA PARTNERÓW SECTION -->
+  <section id="partnerzy" class="section section-partners">
+    <div class="section-container">
+      <div class="partners-glow"></div>
+      <div class="section-header-block centered">
+        <p class="section-eyebrow">LET'S UNITE!</p>
+        <h2 class="section-title partners-headline">WSPÓLNIE <span class="highlight-green">PO SUKCES</span></h2>
+      </div>
+
+      <div class="partners-columns">
+        <div class="partners-col">
+          <p class="partners-text">
+            Wierzymy, że prawdziwe osiągnięcia są owocem wspólnej pracy, pasji oraz zaangażowania.
+            <br>United Środa Śląska to więcej niż klub – to społeczność, która z dumą reprezentuje nasz region, jednocząc społeczność wokół sportowych wartości.
+          </p>
+        </div>
+        <div class="partners-col">
+          <p class="partners-text">
+            Zapraszamy Państwa do nawiązania wyjątkowej współpracy, która otwiera drogę do wspólnego rozwoju i budowania silnej marki.
+            <br>Jako nasz partner stają się Państwo integralną częścią sportowej rodziny, mając realny wpływ na przyszłość klubu oraz sukcesy naszych drużyn na boisku i poza nim.
+          </p>
+        </div>
+      </div>
+
+      <div class="partners-action">
+        <a class="btn-partner-cta" href="mailto:united.srodaslaska@gmail.com">
+          <svg class="btn-cta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+          </svg>
+          <span>Napisz do nas</span>
+          <span class="btn-cta-arrow">↗</span>
+        </a>
+      </div>
+
+      <div class="partners-showcase">
+        <div class="partners-divider">
+          <h3 class="partners-showcase-title">Wspierają Nas</h3>
+        </div>
+        <div class="partners-grid">
+          @for (partner of partners; track partner.id) {
+            <div class="partner-card">
+              <div class="partner-card-inner">
+                @if (hasPartnerLogo(partner.id)) {
+                  <img
+                    [src]="partnerLogoUrl(partner.logoFilename)"
+                    [alt]="partner.name"
+                    class="partner-logo-img"
+                    (error)="onPartnerLogoError(partner.id)"
+                  />
+                } @else {
+                  <span class="partner-placeholder">{{ partner.name }}</span>
+                }
+              </div>
+            </div>
+          }
+        </div>
       </div>
     </div>
   </section>
@@ -995,16 +1127,17 @@
       <div class="contact-card">
         <div class="contact-glow"></div>
         <div class="contact-content">
-          <p class="section-eyebrow">LET'S UNITE!</p>
-          <h2 class="contact-headline">NAWIĄŻMY <span class="highlight-green">WSPÓŁPRACĘ</span></h2>
+          <p class="section-eyebrow">SKONTAKTUJ SIĘ Z NAMI</p>
+          <h2 class="contact-headline">NAPISZ <span class="highlight-green">DO NAS</span></h2>
           <p class="contact-text">
-            Chcesz przyczynić się do sukcesu wspierając klub lub nawiązując współpracę? Zapraszamy do kontaktu.
+            Chcesz razem z nami budować sukces klubu? Masz pytania?
+            <br>Czekamy na Twoją wiadomość.
           </p>
 
           <div class="contact-grid-info">
             <div class="info-item">
               <span class="info-label">KONTAKT MAILOWY</span>
-              <strong class="info-val">united.srodaslaska&#64;gmail.com</strong>
+              <a class="info-val mail-link" href="mailto:united.srodaslaska@gmail.com">united.srodaslaska&#64;gmail.com</a>
               <span class="info-sub">Odpowiadamy w ciągu 24h</span>
             </div>
             <div class="info-item">
@@ -1014,11 +1147,24 @@
             </div>
           </div>
 
-          <div class="contact-action">
-            <a class="btn btn-primary" href="mailto:united.srodaslaska@gmail.com">
-              <span>Napisz do nas</span>
-              <span class="arrow">↗</span>
-            </a>
+          <div class="contact-socials-block">
+            <span class="socials-label">OBSERWUJ NAS W MEDIACH SPOŁECZNOŚCIOWYCH</span>
+            <div class="social-buttons">
+              <a class="btn-social btn-facebook" href="https://www.facebook.com/people/United-%C5%9Aroda-%C5%9Al%C4%85ska/61590726986782/" target="_blank" rel="noopener noreferrer">
+                <svg class="social-icon" viewBox="0 0 24 24">
+                  <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                </svg>
+                <span>Facebook</span>
+                <span class="arrow-out">↗</span>
+              </a>
+              <a class="btn-social btn-instagram" href="https://www.instagram.com/united_sroda_slaska/" target="_blank" rel="noopener noreferrer">
+                <svg class="social-icon" viewBox="0 0 24 24">
+                  <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
+                </svg>
+                <span>Instagram</span>
+                <span class="arrow-out">↗</span>
+              </a>
+            </div>
           </div>
         </div>
       </div>

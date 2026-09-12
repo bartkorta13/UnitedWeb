@@ -219,7 +219,7 @@ private fun ensureDynamoDbLocalRunning() {
 
 private fun parseSeedPlayers(stream: InputStream, mapper: ObjectMapper): List<PlayerItem> {
     val rootNode = mapper.readTree(stream)
-    val leagueData = rootNode.get("LeagueData")
+    val leagueData = rootNode.get("LeagueData-Prod") ?: rootNode.get("LeagueDataProd") ?: rootNode.get("LeagueData")
     if (leagueData != null && leagueData.isArray) {
         return leagueData.mapNotNull { entry ->
             val item = entry.get("PutRequest")?.get("Item") ?: return@mapNotNull null

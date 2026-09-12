@@ -4,7 +4,7 @@ provider "aws" {
 
 # 0. DynamoDB Table: Production League Data (Protected & Point-in-Time Recovery)
 resource "aws_dynamodb_table" "league_data" {
-  name           = "LeagueData"
+  name           = "LeagueData-Prod"
   billing_mode   = "PROVISIONED"
   read_capacity  = 1
   write_capacity = 1
@@ -95,29 +95,44 @@ resource "aws_iam_role_policy" "s3_upload_policy" {
 
 # 2. The Lambda Function
 resource "aws_lambda_function" "api_lambda" {
-  function_name = "united-core-api"
+  function_name = "united-core-api-prod"
   role          = aws_iam_role.lambda_exec.arn
 
   # Points to the fat JAR
   filename         = "../core-service/build/libs/core-service-all.jar"
   source_code_hash = filebase64sha256("../core-service/build/libs/core-service-all.jar")
 
-  handler = "com.united.handler.ApiLambdaHandler::handleRequest"
-  runtime = "java21"
-  timeout = 15
-  memory_size = 512
+  handler     = "com.united.handler.ApiLambdaHandler::handleRequest"
+  runtime     = "java21"
+  timeout     = 15
+  memory_size = 1024
+
+  publish = true
+
+  snap_start {
+    apply_on = "PublishedVersions"
+  }
 
   environment {
     variables = {
       ASSETS_S3_BUCKET = aws_s3_bucket.assets.id
       ASSETS_CDN_URL   = "https://${aws_cloudfront_distribution.assets_cdn.domain_name}"
+      DYNAMODB_TABLE   = aws_dynamodb_table.league_data.name
     }
   }
 }
 
+# Alias pointing to the published version for SnapStart
+resource "aws_lambda_alias" "api_lambda_live" {
+  name             = "live"
+  description      = "Production alias pointing to published version with SnapStart enabled"
+  function_name    = aws_lambda_function.api_lambda.function_name
+  function_version = aws_lambda_function.api_lambda.version
+}
+
 # 3. API Gateway
 resource "aws_apigatewayv2_api" "http_api" {
-  name          = "united-http-api"
+  name          = "united-http-api-prod"
   protocol_type = "HTTP"
 
   cors_configuration {
@@ -131,8 +146,8 @@ resource "aws_apigatewayv2_api" "http_api" {
 resource "aws_apigatewayv2_integration" "lambda_proxy" {
   api_id                 = aws_apigatewayv2_api.http_api.id
   integration_type       = "AWS_PROXY"
-  integration_uri        = aws_lambda_function.api_lambda.invoke_arn
-  payload_format_version = "2.0" # <-- THIS IS THE FIX
+  integration_uri        = aws_lambda_alias.api_lambda_live.invoke_arn
+  payload_format_version = "2.0"
 }
 
 resource "aws_apigatewayv2_route" "get_results_by_path" {
@@ -189,7 +204,7 @@ resource "aws_apigatewayv2_route" "get_news_by_id" {
 # 4a. Cognito User Pool: Authentication for Admin Panel
 # ------------------------------------------------------------------------------
 resource "aws_cognito_user_pool" "admin_pool" {
-  name = "united-admin-user-pool"
+  name = "united-admin-user-pool-prod"
 
   username_attributes      = ["email"]
   auto_verified_attributes = ["email"]
@@ -213,7 +228,7 @@ resource "aws_cognito_user_pool" "admin_pool" {
 }
 
 resource "aws_cognito_user_pool_client" "admin_client" {
-  name         = "united-admin-client"
+  name         = "united-admin-client-prod"
   user_pool_id = aws_cognito_user_pool.admin_pool.id
 
   explicit_auth_flows = [
@@ -284,11 +299,16 @@ resource "aws_apigatewayv2_route" "post_upload_url" {
   authorizer_id      = aws_apigatewayv2_authorizer.cognito.id
 }
 
-# 5. API Gateway Stage
+# 5. API Gateway Stage with Throttling / Rate-Limiting Protection
 resource "aws_apigatewayv2_stage" "default_stage" {
   api_id      = aws_apigatewayv2_api.http_api.id
   name        = "$default"
   auto_deploy = true
+
+  default_route_settings {
+    throttling_burst_limit = 50
+    throttling_rate_limit  = 20
+  }
 }
 
 # 6. Permissions for API Gateway to invoke Lambda
@@ -296,6 +316,7 @@ resource "aws_lambda_permission" "api_gw" {
   statement_id  = "AllowExecutionFromAPIGateway"
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.api_lambda.function_name
+  qualifier     = aws_lambda_alias.api_lambda_live.name
   principal     = "apigateway.amazonaws.com"
   source_arn    = "${aws_apigatewayv2_api.http_api.execution_arn}/*/*"
 }
@@ -310,7 +331,7 @@ output "api_url" {
 # 8. S3 Bucket for Media Assets (Private storage)
 # ------------------------------------------------------------------------------
 resource "aws_s3_bucket" "assets" {
-  bucket_prefix = "united-league-assets-"
+  bucket        = "united-league-assets-prod-8346f9643510ec7d025891"
   force_destroy = true
 
   tags = {
@@ -367,7 +388,7 @@ data "aws_cloudfront_cache_policy" "caching_optimized" {
 resource "aws_cloudfront_distribution" "assets_cdn" {
   enabled             = true
   is_ipv6_enabled     = true
-  comment             = "CloudFront CDN for United Assets"
+  comment             = "CloudFront CDN for United Production Assets"
   price_class         = "PriceClass_100" # Europe, USA, Canada
 
   origin {
@@ -408,7 +429,7 @@ resource "aws_cloudfront_distribution" "assets_cdn" {
 resource "aws_cloudfront_distribution" "frontend_cdn" {
   enabled             = true
   is_ipv6_enabled     = true
-  comment             = "CloudFront CDN for United Frontend UI"
+  comment             = "CloudFront CDN for United Production Frontend UI"
   default_root_object = "index.html"
   price_class         = "PriceClass_100" # Europe, USA, Canada
 
@@ -531,7 +552,7 @@ resource "aws_s3_bucket_cors_configuration" "dev_assets_cors" {
 resource "aws_cloudfront_distribution" "dev_assets_cdn" {
   enabled             = true
   is_ipv6_enabled     = true
-  comment             = "CloudFront CDN for United Dev Assets"
+  comment             = "CloudFront CDN for United Development Assets"
   price_class         = "PriceClass_100"
 
   origin {
@@ -594,22 +615,42 @@ resource "aws_s3_bucket_policy" "dev_assets_oac_policy" {
 # 13. Outputs
 # ------------------------------------------------------------------------------
 output "storage_bucket_name" {
-  description = "Single S3 bucket for both /app and /assets"
+  description = "Production S3 bucket for both /app and /assets (alias)"
+  value       = aws_s3_bucket.assets.id
+}
+
+output "prod_storage_bucket_name" {
+  description = "Production S3 bucket for both /app and /assets"
   value       = aws_s3_bucket.assets.id
 }
 
 output "assets_bucket_name" {
-  description = "Single S3 bucket name (alias for backwards compatibility)"
+  description = "Production S3 bucket name (alias for backwards compatibility)"
+  value       = aws_s3_bucket.assets.id
+}
+
+output "prod_assets_bucket_name" {
+  description = "Production S3 bucket for media assets"
   value       = aws_s3_bucket.assets.id
 }
 
 output "frontend_cdn_url" {
-  description = "Public HTTPS URL for the UnitedWeb Frontend application"
+  description = "Public HTTPS URL for the UnitedWeb Frontend application (Production alias)"
+  value       = "https://${aws_cloudfront_distribution.frontend_cdn.domain_name}"
+}
+
+output "prod_frontend_cdn_url" {
+  description = "Public HTTPS URL for the UnitedWeb Frontend application (Production)"
   value       = "https://${aws_cloudfront_distribution.frontend_cdn.domain_name}"
 }
 
 output "assets_cdn_url" {
-  description = "CloudFront CDN Base URL for media assets (photos & logos)"
+  description = "CloudFront CDN Base URL for media assets (Production alias)"
+  value       = "https://${aws_cloudfront_distribution.assets_cdn.domain_name}"
+}
+
+output "prod_assets_cdn_url" {
+  description = "CloudFront CDN Base URL for production media assets (photos & logos)"
   value       = "https://${aws_cloudfront_distribution.assets_cdn.domain_name}"
 }
 
@@ -624,18 +665,43 @@ output "dev_assets_cdn_url" {
 }
 
 output "dynamodb_table_arn" {
-  description = "ARN of the production LeagueData DynamoDB table"
+  description = "ARN of the production LeagueData-Prod DynamoDB table (alias)"
   value       = aws_dynamodb_table.league_data.arn
 }
 
+output "prod_dynamodb_table_arn" {
+  description = "ARN of the production LeagueData-Prod DynamoDB table"
+  value       = aws_dynamodb_table.league_data.arn
+}
+
+output "prod_dynamodb_table_name" {
+  description = "Name of the production DynamoDB table"
+  value       = aws_dynamodb_table.league_data.name
+}
+
 output "frontend_distribution_id" {
-  description = "CloudFront Distribution ID for running frontend cache invalidations"
+  description = "CloudFront Distribution ID for running production frontend cache invalidations"
+  value       = aws_cloudfront_distribution.frontend_cdn.id
+}
+
+output "prod_frontend_distribution_id" {
+  description = "CloudFront Distribution ID for running production frontend cache invalidations"
   value       = aws_cloudfront_distribution.frontend_cdn.id
 }
 
 output "assets_distribution_id" {
-  description = "CloudFront Distribution ID for running assets cache invalidations"
+  description = "CloudFront Distribution ID for running production assets cache invalidations"
   value       = aws_cloudfront_distribution.assets_cdn.id
+}
+
+output "prod_assets_distribution_id" {
+  description = "CloudFront Distribution ID for running production assets cache invalidations"
+  value       = aws_cloudfront_distribution.assets_cdn.id
+}
+
+output "dev_assets_distribution_id" {
+  description = "CloudFront Distribution ID for running development assets cache invalidations"
+  value       = aws_cloudfront_distribution.dev_assets_cdn.id
 }
 
 output "cognito_user_pool_id" {
@@ -646,4 +712,74 @@ output "cognito_user_pool_id" {
 output "cognito_client_id" {
   description = "Client ID of the Cognito User Pool Client for web frontend"
   value       = aws_cognito_user_pool_client.admin_client.id
+}
+
+# ------------------------------------------------------------------------------
+# 14. Scraper Lambda Function & EventBridge Schedules
+# ------------------------------------------------------------------------------
+resource "aws_lambda_function" "scraper_lambda" {
+  function_name = "united-scraper-prod"
+  role          = aws_iam_role.lambda_exec.arn
+
+  filename         = "../scraper-lambda/build/libs/united-scraper.jar"
+  source_code_hash = filebase64sha256("../scraper-lambda/build/libs/united-scraper.jar")
+
+  handler     = "com.united.handler.ScraperLambdaHandler::handleRequest"
+  runtime     = "java21"
+  timeout     = 90
+  memory_size = 512
+
+  environment {
+    variables = {
+      DYNAMODB_TABLE = aws_dynamodb_table.league_data.name
+    }
+  }
+
+  tags = {
+    Project     = "UnitedWeb"
+    Environment = "production"
+  }
+}
+
+resource "aws_cloudwatch_event_rule" "scraper_saturday" {
+  name                = "ScaperSaturdayHeavySchedule"
+  schedule_expression = "cron(0 11-21 ? * SAT *)"
+}
+
+resource "aws_cloudwatch_event_target" "scraper_saturday_target" {
+  rule      = aws_cloudwatch_event_rule.scraper_saturday.name
+  target_id = "muuumspb6hag91dtat8"
+  arn       = aws_lambda_function.scraper_lambda.arn
+}
+
+resource "aws_lambda_permission" "scraper_saturday_perm" {
+  statement_id  = "AllowExecutionFromEventBridgeSaturday"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.scraper_lambda.function_name
+  principal     = "events.amazonaws.com"
+  source_arn    = aws_cloudwatch_event_rule.scraper_saturday.arn
+}
+
+resource "aws_cloudwatch_event_rule" "scraper_weekdays" {
+  name                = "SundayAndWeekdaysSchedule"
+  schedule_expression = "cron(0 18,20,21 ? * SUN,MON,TUE,WED,THU,FRI *)"
+}
+
+resource "aws_cloudwatch_event_target" "scraper_weekdays_target" {
+  rule      = aws_cloudwatch_event_rule.scraper_weekdays.name
+  target_id = "0t0f6gl1o5xeturq7de"
+  arn       = aws_lambda_function.scraper_lambda.arn
+}
+
+resource "aws_lambda_permission" "scraper_weekdays_perm" {
+  statement_id  = "AllowExecutionFromEventBridgeWeekdays"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.scraper_lambda.function_name
+  principal     = "events.amazonaws.com"
+  source_arn    = aws_cloudwatch_event_rule.scraper_weekdays.arn
+}
+
+output "prod_scraper_lambda_arn" {
+  description = "ARN of the production Scraper Lambda function"
+  value       = aws_lambda_function.scraper_lambda.arn
 }
